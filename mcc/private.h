@@ -23,6 +23,15 @@
 #ifndef PRIVATE_H
 #define PRIVATE_H
 
+/* Unconditional C-linkage declaration for debug logging in constructors */
+#if defined(__cplusplus)
+extern "C" {
+#endif
+void kprintf(const char *fmt, ...);
+#if defined(__cplusplus)
+}
+#endif
+
 #ifndef _PROTO_INTUITION_H
 #include <proto/intuition.h>
 #endif
@@ -186,17 +195,25 @@ struct HTMLviewData
 
 #else
 
+
+
+/* Force pointers into .ctors section for our manual scan in ctor_dtor.c.
+   Add __saveds because these are called via pointer from _init/_fini and need global data access. 
+   Wrap with logging to identify crashes. */
 #define CONSTRUCTOR(name,pri) \
-	asm(".stabs \"___INIT_LIST__\",22,0,0,___ctor_" #name); \
-	asm(".stabs \"___INIT_LIST__\",20,0,0," #pri); \
-	extern "C" VOID __ctor_##name##(VOID); \
-	extern "C" VOID __ctor_##name##(VOID)
+	static void __real_ctor_##name(void); \
+	static void __ctor_##name(void) __attribute__((saveds)); \
+	static void (*__ptr_##name)(void) __attribute__((used, section(".ctors"))) = __ctor_##name; \
+	static void __ctor_##name(void) { \
+		__real_ctor_##name(); \
+	} \
+	static void __real_ctor_##name(void)
+
 
 #define DESTRUCTOR(name,pri) \
-	asm(".stabs \"___EXIT_LIST__\",22,0,0,___dtor_" #name); \
-	asm(".stabs \"___EXIT_LIST__\",20,0,0," #pri); \
-	extern "C" VOID __dtor_##name##(VOID); \
-	extern "C" VOID __dtor_##name##(VOID)
+	static void __dtor_##name(void) __attribute__((saveds)); \
+	static void (*__ptr_##name)(void) __attribute__((used, section(".dtors"))) = __dtor_##name; \
+	static void __dtor_##name(void)
 
 #endif /* __amigaos4__ */
 

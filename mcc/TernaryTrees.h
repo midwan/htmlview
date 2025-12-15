@@ -28,7 +28,8 @@ struct TNode
   TNode(CONST_STRPTR str, CONST_APTR data);
 
   virtual ~TNode ();
-  struct TNode *TInsert(CONST_STRPTR str, CONST_APTR data);
+  // Refactored to static to safely handle NULL root
+  static struct TNode *STInsert(struct TNode *root, CONST_STRPTR str, CONST_APTR data);
 
   struct TNode *Left, *Right;
   union
@@ -47,7 +48,7 @@ ULONG BinaryInsert (struct TNode *&tree, T *elements, ULONG from, ULONG to)
 {
   ULONG diff = (to-from) / 2;
 
-  tree = tree->TInsert(elements[from+diff].Name, elements[from+diff].GetData());
+  tree = TNode::STInsert(tree, elements[from+diff].Name, elements[from+diff].GetData());
   if (tree==NULL) return FALSE;
 
   if(from < to)

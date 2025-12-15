@@ -253,7 +253,10 @@ void FreeVecPooled(APTR pool, APTR mem)
 }
 #endif
 
-CONSTRUCTOR(InitMem, 10)
+extern "C" void kprintf(const char *fmt, ...);
+
+/* Called explicitly from _init() in ctor_dtor.c */
+extern "C" void InitMemoryPool(void)
 {
   #ifndef __MORPHOS__
 	  #if defined(__amigaos4__)
@@ -273,7 +276,8 @@ CONSTRUCTOR(InitMem, 10)
   #endif
 }
 
-DESTRUCTOR(CleanupMem, 10)
+/* Called explicitly from _fini() in ctor_dtor.c */
+extern "C" void CleanupMemoryPool(void)
 {
   if(MemoryPool)
   {

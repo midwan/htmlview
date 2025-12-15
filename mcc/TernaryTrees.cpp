@@ -37,20 +37,18 @@ TNode::TNode(CONST_STRPTR str, CONST_APTR data)
 TNode::~TNode ()
 {
   delete Left;
-  if(SplitChar)
-    delete Middle;
   delete Right;
 }
 
-struct TNode *TNode::TInsert(CONST_STRPTR str, CONST_APTR data)
+struct TNode *TNode::STInsert(struct TNode *root, CONST_STRPTR str, CONST_APTR data)
 {
-	if (this)
+	if (root)
     {
-		if (*str < SplitChar) Left = Left->TInsert(str, data);
-		else if (*str > SplitChar) Right = Right->TInsert(str, data);
-			 else if (SplitChar) Middle = Middle->TInsert(str+1, data);
+		if (*str < root->SplitChar) root->Left = STInsert(root->Left, str, data);
+		else if (*str > root->SplitChar) root->Right = STInsert(root->Right, str, data);
+		else if (root->SplitChar) root->Middle = STInsert(root->Middle, str+1, data);
 
-		return this;
+		return root;
 	}
 	else
     {

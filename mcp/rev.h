@@ -21,10 +21,10 @@
 ***************************************************************************/
 
 #define LIB_VERSION    13
-#define LIB_REVISION   4
+#define LIB_REVISION   5
 
-#define LIB_REV_STRING "13.4"
-#define LIB_DATE       "20.12.2007"
+#define LIB_REV_STRING "13.5"
+#define LIB_DATE       "15.12.2025"
 
 #if defined(__PPC__)
   #if defined(__MORPHOS__)
@@ -44,4 +44,4 @@
   #define CPU ""
 #endif
 
-#define LIB_COPYRIGHT  "Copyright (C) 2005-2007 HTMLview.mcc Open Source Team"
+#define LIB_COPYRIGHT  "Copyright (C) 2005-2025 HTMLview.mcc Open Source Team"

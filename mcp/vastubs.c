@@ -1,3 +1,4 @@
+
 /***************************************************************************
 
  HTMLview.mcc - HTMLview MUI Custom Class
@@ -42,4 +43,20 @@ ULONG SetAttrs( APTR object, ULONG tag1, ... )
 #else
   #error "VARGS stubs are only save on m68k systems!"
 #endif
+#endif
+
+#if defined(__amigaos3__)
+// Added stubs for libnix/C++ init
+// exit() is provided by exit_stub.o
+void _init(void) { }
+void _fini(void) { }
+
+#include <stdarg.h>
+#include <stdio.h>
+void kprintf(const char *formatString, ...)
+{
+    // Stub for mcp: do nothing.
+    // We only need logs from the main mcc library.
+    (void)formatString;
+}
 #endif

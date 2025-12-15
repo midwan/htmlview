@@ -45,6 +45,8 @@
 #define SUPERCLASSP   MUIC_Mccprefs
 
 #define INSTDATAP     InstData_MCP
+#define INSTDATAPSIZE sizeof(struct InstData_MCP)
+#define gate__DispatcherP _DispatcherP
 
 #define USERLIBID     CLASS " " LIB_REV_STRING CPU " (" LIB_DATE ") " LIB_COPYRIGHT
 #define MASTERVERSION 19

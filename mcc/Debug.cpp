@@ -20,6 +20,7 @@
 
 ***************************************************************************/
 
+
 #ifdef DEBUG
 
 #include <stdio.h> // vsnprintf
@@ -72,7 +73,7 @@ static ULONG debug_classes = DBC_ERROR | DBC_DEBUG | DBC_WARNING | DBC_ASSERT | 
 
 /****************************************************************************/
 
-#ifdef __MORPHOS__
+#if defined(__MORPHOS__)
 
 #define VNewRawDoFmt(__p0, __p1, __p2, __p3) \
 	(((STRPTR (*)(void *, CONST_STRPTR , APTR (*)(APTR, UBYTE), STRPTR , va_list ))*(void**)((long)(EXEC_BASE_NAME) - 820))((void*)(EXEC_BASE_NAME), __p0, __p1, __p2, __p3))
@@ -84,6 +85,17 @@ void kprintf(const char *formatString,...)
     va_start(va,formatString);
     VNewRawDoFmt(formatString,(void * (*)(void *, UBYTE))RAWFMTFUNC_SERIAL,NULL,va);
 	va_end(va);
+}
+#elif defined(__amigaos3__)
+extern "C" void KPrintF(const char *fmt, ...);
+void kprintf(const char *formatString, ...)
+{
+    char buf[1024];
+    va_list va;
+    va_start(va, formatString);
+    vsnprintf(buf, sizeof(buf), formatString, va);
+    KPrintF("%s", buf);
+    va_end(va);
 }
 #endif
 

@@ -125,7 +125,9 @@ VOID AnimInfo::Stop (Object *obj, struct AnimInfo *prev)
     {
       prev = this;
     }
-    prev->Next->Stop(obj, prev);
+    if (prev && prev->Next) {
+        prev->Next->Stop(obj, prev);
+    }
   }
 }
 

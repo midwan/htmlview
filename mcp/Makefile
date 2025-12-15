@@ -134,11 +134,19 @@ PREFTARGET= $(BINDIR)/HTMLview-Prefs
 
 # Common compiler/linker flags
 WARN     = -W -Wall -Wwrite-strings
-OPTFLAGS = -O3 -fomit-frame-pointer -funroll-loops
-DEBUG    = -DDEBUG -O0
-DEBUGSYM = -gstabs
-CFLAGS   = -I. -I../mcc -I../include $(CPU) $(WARN) $(OPTFLAGS) \
-           $(DEBUG) $(DEBUGSYM) -c
+OPTFLAGS = -O3 -fomit-frame-pointer
+DEBUG    =
+DEBUGSYM =
+
+ifneq ($(DEBUG),)
+  OPTFLAGS = -O0
+  DEBUGSYM = -gstabs
+  CFLAGS   = -I. -I../mcc -I../include $(CPU) $(WARN) $(OPTFLAGS) \
+             -DDEBUG $(DEBUGSYM) -c
+else
+  CFLAGS   = -I. -I../mcc -I../include $(CPU) $(WARN) $(OPTFLAGS) \
+             -DNDEBUG -c
+endif
 LDFLAGS  = $(CPU) $(DEBUGSYM)
 LDLIBS   = -lm
 
@@ -178,7 +186,10 @@ ifeq ($(OS), os3)
   CPU	    = -m68020-60 -msoft-float
   CFLAGS  += -noixemul -DNO_INLINE_STDARG -DUSEHOTKEY -DUSEBETTERSTRING
   LDFLAGS += -noixemul
-  LDLIBS  += -ldebug -lmui
+  LDLIBS  += -lmui
+ifneq ($(DEBUG),)
+  LDLIBS  += -ldebug
+endif
 
 else
 ifeq ($(OS), mos)
@@ -195,7 +206,10 @@ ifeq ($(OS), mos)
   CPU     = -mcpu=powerpc
   CFLAGS  += -noixemul -DNO_PPCINLINE_STDARG
   LDFLAGS += -noixemul
-  LDLIBS  += -ldebug
+  ifneq ($(DEBUG),)
+    LDLIBS += -ldebug
+  endif
+
 
 else
 ifeq ($(OS), aros)
@@ -235,7 +249,7 @@ PREFOBJS= $(OBJDIR)/locale.o \
           $(OBJDIR)/Debug.o
 
 ifeq ($(OS), os3)
-MCPOBJS  += $(OBJDIR)/vastubs.o
+MCPOBJS  += $(OBJDIR)/vastubs.o $(OBJDIR)/exit_stub.o
 PREFOBJS += $(OBJDIR)/vastubs.o
 endif
 

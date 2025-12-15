@@ -184,7 +184,7 @@ struct Interface *INewlib = NULL;
 #else
 struct Library        *MUIMasterBase = NULL;
 struct ExecBase       *SysBase       = NULL;
-struct Library        *UtilityBase   = NULL;
+struct UtilityBase    *UtilityBase   = NULL;
 struct DosLibrary     *DOSBase       = NULL;
 struct GfxBase        *GfxBase       = NULL;
 struct IntuitionBase  *IntuitionBase = NULL;
@@ -198,12 +198,17 @@ extern "C" {
 // newer OS version can directly take the specified
 // number for the ramlib process
 #if defined(MIN_STACKSIZE)
-
 // transforms a define into a string
 #define STR(x)  STR2(x)
 #define STR2(x) #x
 
 static const char USED_VAR stack_size[] = "$STACK:" STR(MIN_STACKSIZE) "\n";
+#endif
+
+// Declared _init/_fini for AmigaOS 3 C++ manual initialization
+#if defined(__amigaos3__)
+extern void _init(void);
+extern void _fini(void);
 #endif
 
 /* The name of the class will also become the name of the library. */
@@ -642,7 +647,7 @@ static ULONG mccLibInit(struct LibraryHeader *base)
   if((DOSBase = (struct DosLibrary*)OpenLibrary("dos.library", 36)) &&
      (GfxBase = (struct GfxBase*)OpenLibrary("graphics.library", 36)) &&
      (IntuitionBase = (struct IntuitionBase*)OpenLibrary("intuition.library", 36)) &&
-     (UtilityBase = OpenLibrary("utility.library", 36)))
+     (UtilityBase = (struct UtilityBase*)OpenLibrary("utility.library", 36)))
   #endif
   {
     // we have to please the internal utilitybase
@@ -652,6 +657,11 @@ static ULONG mccLibInit(struct LibraryHeader *base)
       #if defined(__amigaos4__)
       __IUtility = IUtility;
       #endif
+    #endif
+
+    #if defined(__amigaos3__)
+    // Manually call C++ constructors (including InitMem for MemoryPool)
+    _init();
     #endif
 
     #if defined(DEBUG)
@@ -947,6 +957,10 @@ static BPTR LIBFUNC LibExpunge(REG(a6, struct LibraryHeader *base))
 {
 #endif
   BPTR rc;
+
+  #if defined(__amigaos3__)
+  _fini();
+  #endif
 
   D(DBF_STARTUP, "LibExpunge(%s): %ld", CLASS, base->lh_Library.lib_OpenCnt);
 

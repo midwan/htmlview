@@ -305,11 +305,11 @@
     // the AmigaOS3 g++ 2.95.3 cannot handle explicit register definitions and
     // hence requires HookEntry() as gate function
     #define MakeCppHook(hookname, funcname) struct Hook hookname = {{NULL, NULL}, \
-      (HOOKFUNC)HookEntry, (HOOKFUNC)funcname, NULL}
+      (ULONG (*)())HookEntry, (ULONG (*)())funcname, NULL}
     #define MakeCppHookWithData(hookname, funcname, data) struct Hook hookname =  \
-      {{NULL, NULL}, (HOOKFUNC)HookEntry, (HOOKFUNC)funcname, (APTR)data}
+      {{NULL, NULL}, (ULONG (*)())HookEntry, (ULONG (*)())funcname, (APTR)data}
     #define MakeStaticCppHook(hookname, funcname) static struct Hook hookname =   \
-      {{NULL, NULL}, (HOOKFUNC)HookEntry, (HOOKFUNC)funcname, NULL}
+      {{NULL, NULL}, (ULONG (*)())HookEntry, (ULONG (*)())funcname, NULL}
   #endif
 
   #define DISPATCHERPROTO(name) SAVEDS ASM IPTR name(REG(a0,                 \

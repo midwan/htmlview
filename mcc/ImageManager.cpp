@@ -792,8 +792,8 @@ Object *NewDecoderObjectA(UBYTE *buf,struct TagItem *attrs)
           if((cl = MakeClass(NULL, NULL, GetImageDecoderClass(decoders->Base), sizeof(DecoderData), 0L)))
           {
             #if defined(__amigaos3__)
-            cl->cl_Dispatcher.h_SubEntry = (HOOKFUNC)ENTRY(DecoderDispatcher);
-            cl->cl_Dispatcher.h_Entry    = (HOOKFUNC)HookEntry;
+            cl->cl_Dispatcher.h_SubEntry = (ULONG (*)())ENTRY(DecoderDispatcher);
+            cl->cl_Dispatcher.h_Entry    = (ULONG (*)())HookEntry;
             cl->cl_Dispatcher.h_Data     = 0;
             #else
             cl->cl_Dispatcher.h_SubEntry = 0;

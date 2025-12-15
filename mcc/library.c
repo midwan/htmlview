@@ -50,7 +50,7 @@
 
 #define CLASSINIT
 #define CLASSEXPUNGE
-#define MIN_STACKSIZE 8192
+//#define MIN_STACKSIZE 8192
 
 struct Library *LayersBase = NULL;
 struct Library *KeymapBase = NULL;
@@ -76,6 +76,9 @@ static VOID ClassExpunge(struct Library *base);
 extern void _init(void);
 extern void _fini(void);
 extern ULONG GetHTMLviewDataSize(void);
+
+/* Dummy exit for libnix linkage in shared library. Application links against standard CRT. */
+void exit(int s) { (void)s; while(1); }
 
 CPPDISPATCHERGATE(_Dispatcher);
 CPPDISPATCHERGATE(ScrollGroupDispatcher);

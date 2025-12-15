@@ -27,6 +27,18 @@
 
 #include <mcc_common.h>
 
+#ifndef INSTDATAPSIZE
+#define INSTDATAPSIZE sizeof(struct InstData_MCP)
+#endif
+
+#ifndef SUPERCLASSP
+#define SUPERCLASSP "Mccprefs.mcc"
+#endif
+
+#ifndef gate__DispatcherP
+#define gate__DispatcherP _DispatcherP
+#endif
+
 #ifdef __MORPHOS__
 extern struct MUI_CustomClass *PicClass;
 #define PREFSIMAGEOBJECT \

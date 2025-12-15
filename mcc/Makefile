@@ -131,14 +131,23 @@ LOCALE = locale
 # target definition
 MCCTARGET = $(BINDIR)/HTMLview.mcc
 TESTTARGET= $(BINDIR)/HTMLview-Test
+SIMPLETARGET= $(BINDIR)/SimpleTest
 
 # Common compiler/linker flags
 WARN     = -W -Wall -Wwrite-strings
-OPTFLAGS = -O3 -fomit-frame-pointer -funroll-loops
-DEBUG    = -DDEBUG -O0
-DEBUGSYM = -g -gstabs
-CFLAGS   = -I. -I../mcp -I../include $(CPU) $(WARN) $(OPTFLAGS) \
-           $(DEBUG) $(DEBUGSYM) -c
+OPTFLAGS = -O3 -fomit-frame-pointer
+DEBUG    =
+DEBUGSYM =
+
+ifneq ($(DEBUG),)
+  OPTFLAGS = -O0
+  DEBUGSYM = -g -gstabs
+  CFLAGS   = -I. -I../mcp -I../include $(CPU) $(WARN) $(OPTFLAGS) \
+             -DDEBUG $(DEBUGSYM) -c
+else
+  CFLAGS   = -I. -I../mcp -I../include $(CPU) $(WARN) $(OPTFLAGS) \
+             -DNDEBUG -c
+endif
 LDFLAGS  = $(CPU) $(DEBUGSYM)
 LDLIBS   =
 
@@ -181,8 +190,12 @@ ifeq ($(OS), os3)
   CPU	  = -m68020-60 -msoft-float
   WARN    += -Wno-sign-compare
   CFLAGS  += -noixemul -DNO_INLINE_STDARG -D__amigaos3__
-  LDFLAGS += -noixemul
-  LDLIBS  += -ldebug -lmui
+  LDFLAGS += -noixemul -nostartfiles
+  LDLIBS  += -lmui
+  ifneq ($(DEBUG),)
+    LDLIBS += -ldebug
+  endif
+
 
 else
 ifeq ($(OS), mos)
@@ -200,7 +213,10 @@ ifeq ($(OS), mos)
   CPU     = -mcpu=powerpc
   CFLAGS  += -noixemul -DNO_PPCINLINE_STDARG
   LDFLAGS += -noixemul
-  LDLIBS  += -ldebug
+  ifneq ($(DEBUG),)
+    LDLIBS += -ldebug
+  endif
+
 
 else
 ifeq ($(OS), aros)
@@ -227,6 +243,7 @@ endif
 # hosts.
 
 MCCOBJS = \
+          $(OBJDIR)/crtclasses_begin.o \
           $(OBJDIR)/library.o \
           $(OBJDIR)/library_cpp.o \
           $(OBJDIR)/ctor_dtor.o \
@@ -302,9 +319,10 @@ MCCOBJS = \
           $(OBJDIR)/TernaryTrees.o \
           $(OBJDIR)/URLHandling.o \
           $(OBJDIR)/StringClass.o \
-          $(OBJDIR)/Debug.o
+          $(OBJDIR)/Debug.o \
+          $(OBJDIR)/crtclasses_end.o
 
-TESTOBJS= $(OBJDIR)/HTMLview-Test.o \
+TESTOBJS= $(OBJDIR)/library_cpp.o \
           $(OBJDIR)/library_cpp.o \
           $(OBJDIR)/ctor_dtor.o \
           $(OBJDIR)/classes/AClass.o \
@@ -394,7 +412,7 @@ CATALOGS = $(LOCALE)/deutsch.catalog
 
 #
 
-all: $(BINDIR) $(OBJDIR) $(MCCTARGET) $(TESTTARGET)
+all: $(BINDIR) $(OBJDIR) $(MCCTARGET) $(SIMPLETARGET)
 
 # make the object directories
 $(OBJDIR):
@@ -423,14 +441,19 @@ $(OBJDIR)/mccclass_68k.o: ../include/mccclass_68k.c
 
 #
 
-$(MCCTARGET): $(M68KSTUBS) $(MCCOBJS)
+# Link against all MCC objects EXCEPT library.o (globals conflict)
+LIBOBJS = $(filter-out $(OBJDIR)/library.o $(OBJDIR)/crtclasses_begin.o $(OBJDIR)/crtclasses_end.o, $(MCCOBJS))
+
+
+$(SIMPLETARGET): $(OBJDIR)/SimpleTest.o
 	@echo "  LD    $@"
-	@$(CXX) -nostartfiles $(LDFLAGS) -o $@.debug $(MCCOBJS) $(M68KSTUBS) $(LDLIBS) -Wl,-Map,$@.map
+	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/SimpleTest.o $(LDLIBS) -ldebug -Wl,-Map,$@.map
 	@$(STRIP) --preserve-dates -R.comment -R.sdata2 -S -o $@ $@.debug
 
-$(TESTTARGET): $(TESTOBJS) $(OBJDIR)/HTMLview-Test.o
+
+$(MCCTARGET) : $(MCCOBJS)
 	@echo "  LD    $@"
-	@$(CXX) $(LDFLAGS) -o $@.debug $(TESTOBJS) $(LDLIBS) -Wl,-Map,$@.map
+	@$(CXX) $(LDFLAGS) -o $@.debug $(MCCOBJS) $(LDLIBS) -Wl,-Map,$@.map
 	@$(STRIP) --preserve-dates -R.comment -R.sdata2 -S -o $@ $@.debug
 
 $(OBJDIR)/library.o: library.c ../include/mccinit.c \

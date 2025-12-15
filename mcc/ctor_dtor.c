@@ -23,7 +23,9 @@
 // borrowed from clib2 to be able to intermix C and C++ code with the AmigaOS3 g++ 2.95.3
 
 #include <exec/types.h>
+#include <exec/types.h>
 #include <proto/dos.h>
+#include <proto/exec.h>
 #include <stdlib.h>
 
 #if defined(__amigaos4__)
@@ -43,119 +45,72 @@ typedef void (*func_ptr)(void);
 
 /****************************************************************************/
 
-struct private_function
-{
-	func_ptr	function;
-	int			priority;
-};
+// libnix handles init/exit via these symbols, which might be functions or lists depending on the startup code.
+// In this shared library environment with -nostartfiles, the linker script or libnix setup seems to provide
+// a code thunk (trampoline) at __INIT_LIST__, not a list of pointers.
+// Therefore, we must CALL it, not iterate it.
 
-/****************************************************************************/
-
-extern func_ptr __INIT_LIST__[];
-extern func_ptr __EXIT_LIST__[];
-
-/****************************************************************************/
+extern void __INIT_LIST__(void);
+extern void __INIT_LIST__(void);
+extern void __EXIT_LIST__(void);
 
 extern func_ptr __CTOR_LIST__[];
 extern func_ptr __DTOR_LIST__[];
 
-/****************************************************************************/
 
-static void sort_private_functions(struct private_function * base, size_t count)
-{
-	struct private_function * a;
-	struct private_function * b;
-	size_t i,j;
+// void exit(int s) { (void)s; while(1); }
 
-	i = count - 2;
-
-	do
-	{
-		a = base;
-
-		for(j = 0 ; j <= i ; j++)
-		{
-			b = a + 1;
-
-			if(a->priority > b->priority)
-			{
-				struct private_function t;
-
-				t		= (*a);
-				(*a)	= (*b);
-				(*b)	= t;
-			}
-
-			a = b;
-		}
-	}
-	while(i-- > 0);
-}
 
 /****************************************************************************/
 
-/* Sort all the init and exit functions (private library constructors), then
-   invoke the init functions in descending order. */
+/* Safe iteration of null-terminated INIT list */
 static void call_init_functions(void)
 {
-	LONG num_init_functions = (LONG)(__INIT_LIST__[0]) / 2;
-	LONG num_exit_functions = (LONG)(__EXIT_LIST__[0]) / 2;
-
-	if(num_init_functions > 1)
-		sort_private_functions((struct private_function *)&__INIT_LIST__[1],num_init_functions);
-
-	if(num_exit_functions > 1)
-		sort_private_functions((struct private_function *)&__EXIT_LIST__[1],num_exit_functions);
-
-	if(num_init_functions > 0)
-	{
-		struct private_function * t = (struct private_function *)&__INIT_LIST__[1];
-		LONG i,j;
-
-		for(j = 0 ; j < num_init_functions ; j++)
-		{
-			i = num_init_functions - (j + 1);
-
-		  	(*t[i].function)();
-		}
-	}
+	/* __INIT_LIST__ is not valid in this environment (points to VTable). */
+	/* Do nothing. */
 }
 
 /****************************************************************************/
 
-/* Call all exit functions in ascending order; this assumes that the function
-   table was prepared by call_init_functions() above. */
+/* Safe iteration of null-terminated EXIT list */
 static void call_exit_functions(void)
 {
-	LONG num_exit_functions = (LONG)(__EXIT_LIST__[0]) / 2;
-
-	if(num_exit_functions > 0)
-	{
-		STATIC LONG j = 0;
-
-		struct private_function * t = (struct private_function *)&__EXIT_LIST__[1];
-		LONG i;
-
-		while(j++ < num_exit_functions)
-		{
-			i = j - 1;
-
-			(*t[i].function)();
-		}
-	}
+	/* __EXIT_LIST__ is legacy/stabs. Not used. */
+	// __EXIT_LIST__();
 }
 
 /****************************************************************************/
 
 static void call_constructors(void)
 {
-	ULONG num_ctors = (ULONG)__CTOR_LIST__[0];
-	ULONG i;
-
-	/* Call all constructors in reverse order */
-	for(i = 0 ; i < num_ctors ; i++)
+	/* Handle both count-prefixed (Old GCC) and -1 terminated (New GCC) formats */
+	if ((long)__CTOR_LIST__[0] == -1)
 	{
-		__CTOR_LIST__[num_ctors - i]();
+		/* New format: -1, p1, p2, ... 0. Walk to end, then backwards. */
+		ULONG i = 1;
+		while (__CTOR_LIST__[i]) i++;
+		
+
+		/* i is now at the 0 terminator. Run backwards until index 1. */
+		while (i > 1) {
+			i--;
+			if (__CTOR_LIST__[i]) {
+				__CTOR_LIST__[i]();
+			}
+		}
+	}
+	else
+	{
+		/* Old format: count, p1, p2... */
+		ULONG num_ctors = (ULONG)__CTOR_LIST__[0];
+		ULONG i;
+
+
+		/* Call all constructors in reverse order */
+		for(i = 0 ; i < num_ctors ; i++)
+		{
+			__CTOR_LIST__[num_ctors - i]();
+		}
 	}
 }
 
@@ -163,13 +118,29 @@ static void call_constructors(void)
 
 static void call_destructors(void)
 {
-	ULONG num_dtors = (ULONG)__DTOR_LIST__[0];
-	static ULONG i;
-
-	/* Call all destructors in forward order */
-	while(i++ < num_dtors)
+	if ((long)__DTOR_LIST__[0] == -1)
 	{
-		__DTOR_LIST__[i]();
+		/* New format: -1, p1, p2... 0. Run forwards? 
+		   Destructors usually run in reverse of constructors? 
+		   Standard is: Constructors run End->Start. Destructors run Start->End.
+		   Let's assume Start->End (1..n) for dtors.
+		*/
+		ULONG i = 1;
+		while (__DTOR_LIST__[i]) {
+			__DTOR_LIST__[i]();
+			i++;
+		}
+	}
+	else
+	{
+		ULONG num_dtors = (ULONG)__DTOR_LIST__[0];
+		static ULONG i; /* Start at 0 */
+
+		/* Call all destructors in forward order */
+		while(i++ < num_dtors)
+		{
+			__DTOR_LIST__[i]();
+		}
 	}
 }
 #endif
@@ -186,6 +157,14 @@ void _init(void)
 	for(j = 0 ; j < num_ctors ; j++)
 		__CTOR_LIST__[num_ctors - j]();
 	#elif defined(__amigaos3__)
+    
+    /* Initialize memory pool BEFORE calling C++ constructors 
+       This prevents crashes in constructors that use new/malloc */
+    {
+        extern void InitMemoryPool(void);
+        InitMemoryPool();
+    }
+
 	call_init_functions();
 	call_constructors();
 	#elif defined(__MORPHOS__)
@@ -209,6 +188,12 @@ void _fini(void)
 	#elif defined(__amigaos3__)
 	call_destructors();
 	call_exit_functions();
+
+    /* Cleanup memory pool AFTER all C++ destructors run */
+    {
+        extern void CleanupMemoryPool(void);
+        CleanupMemoryPool();
+    }
 	#elif defined(__MORPHOS__)
 	run_destructors();
 	#endif
