@@ -13,22 +13,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-os3:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v5
-
       - name: Build mcc
         uses: docker://sacredbanana/amiga-compiler:m68k-amigaos
         with:
-          args: sh -c "cd mcc && make OS=os3 DEBUG="
-
+          args: sh -c "cd mcc && make clean && make OS=os3"
       - name: Build mcp
         uses: docker://sacredbanana/amiga-compiler:m68k-amigaos
         with:
-          args: sh -c "cd mcp && make OS=os3 DEBUG="
-
+          args: sh -c "cd mcp && make clean && make OS=os3"
       - name: Upload artifacts
         uses: actions/upload-artifact@v5
         with:
@@ -37,13 +33,62 @@ jobs:
             mcc/bin_os3/*.mcc
             mcp/bin_os3/*.mcp
 
+  build-os4:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build mcc
+        uses: docker://sacredbanana/amiga-compiler:ppc-amigaos
+        with:
+          args: sh -c "cd mcc && make clean && make OS=os4"
+      - name: Build mcp
+        uses: docker://sacredbanana/amiga-compiler:ppc-amigaos
+        with:
+          args: sh -c "cd mcp && make clean && make OS=os4"
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: htmlview-os4-${{ github.sha }}
+          path: |
+            mcc/bin_os4/*.mcc
+            mcp/bin_os4/*.mcp
+
+  build-morphos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build mcc
+        uses: docker://sacredbanana/amiga-compiler:ppc-morphos
+        with:
+          args: sh -c "cd mcc && make clean && make OS=mos"
+      - name: Build mcp
+        uses: docker://sacredbanana/amiga-compiler:ppc-morphos
+        with:
+          args: sh -c "cd mcp && make clean && make OS=mos"
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: htmlview-morphos-${{ github.sha }}
+          path: |
+            mcc/bin_mos/*.mcc
+            mcp/bin_mos/*.mcp
+
+  release:
+    needs: [build-os3, build-os4, build-morphos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download all artifacts
+        uses: actions/download-artifact@v5
+        with:
+          pattern: htmlview-*
+          path: artifacts/
+          merge-multiple: true
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            mcc/bin_os3/*.mcc
-            mcp/bin_os3/*.mcp
+          files: artifacts/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
