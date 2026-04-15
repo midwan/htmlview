@@ -16,7 +16,7 @@ jobs:
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
-        image: amigadev/crosstools:m68k-amigaos
+        image: sacredbanana/amiga-compiler:m68k-amigaos
         options: -v ${{ github.workspace }}:/work
         run: |
           cd mcc
