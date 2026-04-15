@@ -120,10 +120,10 @@ static BOOL ClassInit(UNUSED struct Library *base)
   if((CyberGfxBase = OpenLibrary("cybergraphics.library", 40)) &&
     GETINTERFACE(ICyberGfx, struct CyberGfxIFace*, CyberGfxBase))
   {
-    if((ScrollGroupClass = MUI_CreateCustomClass(NULL, MUIC_Virtgroup, NULL, GetScrollGroupDataSize(), CPPDISPATCHERENTRY(ScrollGroupDispatcher))))
+    if((ScrollGroupClass = MUI_CreateCustomClass(NULL, MUIC_Virtgroup, NULL, GetScrollGroupDataSize(), ENTRY(ScrollGroupDispatcher))))
     {
   	  #ifdef USEMUISTRINGS
-      if((StringClass = MUI_CreateCustomClass(NULL, MUIC_String, NULL, sizeof(struct StringData), CPPDISPATCHERENTRY(StringDispatcher))))
+      if((StringClass = MUI_CreateCustomClass(NULL, MUIC_String, NULL, sizeof(struct StringData), ENTRY(StringDispatcher))))
       #endif
   	  {
       	RETURN(TRUE);

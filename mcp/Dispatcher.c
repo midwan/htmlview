@@ -80,11 +80,7 @@ HOOKPROTONH(AppMessageCode, VOID, Object* htmlview, struct MUIP_AppMessage *args
     {
       char dir[256+8];
 
-      #if defined(__MORPHOS__)
-      stccpy(dir, "file://", sizeof(dir));
-      #else
-      strlcpy(dir, "file://", sizeof(dir));
-      #endif
+      strncpy(dir, "file://", 8); dir[8] = '\0';
 
         if(NameFromLock(args->appmsg->am_ArgList[0].wa_Lock, dir+7, 256))
         {

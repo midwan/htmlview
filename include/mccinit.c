@@ -184,7 +184,7 @@ struct Interface *INewlib = NULL;
 #else
 struct Library        *MUIMasterBase = NULL;
 struct ExecBase       *SysBase       = NULL;
-struct UtilityBase    *UtilityBase   = NULL;
+struct Library        *UtilityBase   = NULL;
 struct DosLibrary     *DOSBase       = NULL;
 struct GfxBase        *GfxBase       = NULL;
 struct IntuitionBase  *IntuitionBase = NULL;
@@ -647,7 +647,7 @@ static ULONG mccLibInit(struct LibraryHeader *base)
   if((DOSBase = (struct DosLibrary*)OpenLibrary("dos.library", 36)) &&
      (GfxBase = (struct GfxBase*)OpenLibrary("graphics.library", 36)) &&
      (IntuitionBase = (struct IntuitionBase*)OpenLibrary("intuition.library", 36)) &&
-     (UtilityBase = (struct UtilityBase*)OpenLibrary("utility.library", 36)))
+     (UtilityBase = OpenLibrary("utility.library", 36)))
   #endif
   {
     // we have to please the internal utilitybase
@@ -676,12 +676,12 @@ static ULONG mccLibInit(struct LibraryHeader *base)
       #endif
       {
         #ifdef SUPERCLASS
-        ThisClass = MUI_CreateCustomClass(&base->lh_Library, (STRPTR)SUPERCLASS, NULL, INSTDATASIZE, CPPDISPATCHERENTRY(_Dispatcher));
+        ThisClass = MUI_CreateCustomClass(&base->lh_Library, (STRPTR)SUPERCLASS, NULL, INSTDATASIZE, ENTRY(_Dispatcher));
         if(ThisClass)
         #endif
         {
           #ifdef SUPERCLASSP
-          if((ThisClassP = MUI_CreateCustomClass(&base->lh_Library, (STRPTR)SUPERCLASSP, NULL, INSTDATAPSIZE, CPPDISPATCHERENTRY(_DispatcherP))))
+          if((ThisClassP = MUI_CreateCustomClass(&base->lh_Library, (STRPTR)SUPERCLASSP, NULL, INSTDATAPSIZE, ENTRY(_DispatcherP))))
           #endif
           {
             #ifdef SUPERCLASS

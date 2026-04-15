@@ -64,18 +64,14 @@ APTR NewObject( struct IClass *classPtr, CONST_STRPTR classID, Tag tag1, ... )
 { return NewObjectA(classPtr, classID, (struct TagItem *)&tag1); }
 
 #include <proto/graphics.h>
-LONG ObtainBestPen( struct ColorMap *cm, ULONG r, ULONG g, ULONG b, Tag tag1, ... )
-{ return ObtainBestPenA(cm, r, g, b, (struct TagItem *)&tag1); }
-VOID GetRPAttrs( CONST struct RastPort *rp, ULONG tag1Type, ... )
-{ GetRPAttrsA(rp, (struct TagItem *)&tag1Type); }
+// GetRPAttrs is already in SDK, no stub needed
+//#ifndef GetRPAttrs
+//LONG ObtainBestPen( struct ColorMap *cm, ULONG r, ULONG g, ULONG b, Tag tag1, ... )
+//{ return ObtainBestPenA(cm, r, g, b, (struct TagItem *)&tag1); }
+//#endif
 
 #include <proto/datatypes.h>
-Object *NewDTObject( APTR name, Tag tag1, ... )
-{ return NewDTObjectA(name, (struct TagItem *)&tag1); }
-ULONG SetDTAttrs( Object *o, struct Window *win, struct Requester *req, Tag tag1, ... )
-{ return SetDTAttrsA(o, win, req, (struct TagItem *)&tag1); }
-ULONG GetDTAttrs( Object *o, Tag tag1, ... )
-{ return GetDTAttrsA(o, (struct TagItem *)&tag1); }
+// NewDTObject, SetDTAttrs, GetDTAttrs already in SDK, no stubs needed
 
 #else
   #error "VARGS stubs are only save on m68k systems!"
