@@ -676,12 +676,12 @@ static ULONG mccLibInit(struct LibraryHeader *base)
       #endif
       {
         #ifdef SUPERCLASS
-        ThisClass = MUI_CreateCustomClass(&base->lh_Library, (STRPTR)SUPERCLASS, NULL, INSTDATASIZE, ENTRY(_Dispatcher));
+        ThisClass = MUI_CreateCustomClass(&base->lh_Library, (STRPTR)SUPERCLASS, NULL, INSTDATASIZE, CPPDISPATCHERENTRY(_Dispatcher));
         if(ThisClass)
         #endif
         {
           #ifdef SUPERCLASSP
-          if((ThisClassP = MUI_CreateCustomClass(&base->lh_Library, (STRPTR)SUPERCLASSP, NULL, INSTDATAPSIZE, ENTRY(_DispatcherP))))
+          if((ThisClassP = MUI_CreateCustomClass(&base->lh_Library, (STRPTR)SUPERCLASSP, NULL, INSTDATAPSIZE, CPPDISPATCHERENTRY(_DispatcherP))))
           #endif
           {
             #ifdef SUPERCLASS

@@ -49,8 +49,8 @@ ImageCacheEntry::~ImageCacheEntry ()
 /*	if(Flags & MUIF_HTMLview_LoadImages_DeleteAfterUse)
 		DeleteFile(Filename+7);
 */
-	delete URL;
-	delete Filename;
+	delete[] URL;
+	delete[] Filename;
 }
 
 VOID DisposeImages (struct ImageCacheEntry *current)
