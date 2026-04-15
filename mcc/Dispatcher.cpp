@@ -964,7 +964,7 @@ CPPDISPATCHER(_Dispatcher)
               if(!(data->Flags & FLG_HostObjNotUsed))
               {
                 delete data->Local;
-                data->Local = new (std::nothrow) char[strlen(url+baselen+pagelen)];
+                data->Local = new (std::nothrow) char[strlen(url+baselen+pagelen)+1];
                 if (!data->Local) return 0;
                 strcpy(data->Local, url+baselen+pagelen+1);
               }

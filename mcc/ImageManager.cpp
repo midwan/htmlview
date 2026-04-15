@@ -84,7 +84,7 @@ ImageCacheItem::ImageCacheItem (STRPTR url, struct PictureFrame *pic)
 ImageCacheItem::~ImageCacheItem ()
 {
   Picture->UnLockPicture();
-  delete URL;
+  delete[] URL;
 }
 
 ImageCache::ImageCache (ULONG maxsize)

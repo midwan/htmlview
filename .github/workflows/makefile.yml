@@ -3,6 +3,8 @@ name: Build
 on:
   push:
     branches: [master]
+    tags:
+      - 'v*'
   pull_request:
     branches: [master]
 
@@ -30,7 +32,18 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v5
         with:
-          name: htmlview-os3
+          name: htmlview-os3-${{ github.sha }}
           path: |
             mcc/bin_os3/*.mcc
             mcp/bin_os3/*.mcp
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            mcc/bin_os3/*.mcc
+            mcp/bin_os3/*.mcp
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
