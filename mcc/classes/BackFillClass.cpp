@@ -166,11 +166,11 @@ HOOKPROTO(BackFillCode, VOID, struct RastPort *rp, struct LayerMsg *lmsg)
   bmp_height -= yoffset;
   for(UWORD y = miny; y <= maxy; y += height)
   {
-    height = min((ULONG)maxy-y+1, bmp_height);
+    height = MIN((ULONG)maxy-y+1, bmp_height);
     struct BitMap *src = ysrc;
     for(UWORD x = minx; x <= maxx; x += width)
     {
-      width = min((ULONG)maxx-x+1, bmp_width);
+      width = MIN((ULONG)maxx-x+1, bmp_width);
       BltBitMap(src, srcx, srcy, dst, x, y, width, height, 0x0c0, ~0, NULL);
 
       if(src == dst)

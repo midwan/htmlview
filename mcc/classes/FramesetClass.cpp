@@ -84,7 +84,7 @@ BOOL FramesetClass::Layout (struct LayoutMessage &lmsg)
     LONG width = lmsg.MaxX - lmsg.MinX + 1, height = lmsg.MaxY - lmsg.MinY + 1;
 
     Left = b1, Top = b2, Width = width, Bottom = b4;
-    lmsg.TopChange = min(lmsg.TopChange, Top);
+    lmsg.TopChange = MIN(lmsg.TopChange, Top);
 
     delete Columns;
     delete Rows;
@@ -125,7 +125,7 @@ BOOL FramesetClass::Layout (struct LayoutMessage &lmsg)
   }
   else
   {
-    lmsg.TopChange = min(lmsg.TopChange, MAX_HEIGHT);
+    lmsg.TopChange = MIN(lmsg.TopChange, MAX_HEIGHT);
   }
 
   return TRUE;

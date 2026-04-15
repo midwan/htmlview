@@ -145,7 +145,7 @@ void *cantFailMalloc(size_t size)
 
 /*******************************************************************/
 
-APTR operator new(std::size_t bytes,const std::nothrow_t&) throw()
+APTR operator new(std::size_t bytes, const std::nothrow_t&) noexcept
 {
 /*  {
     ULONG f;
@@ -165,7 +165,7 @@ APTR operator new(std::size_t bytes,const std::nothrow_t&) throw()
 
 /*******************************************************************/
 
-void *operator new[](std::size_t bytes, const std::nothrow_t&) throw()
+void *operator new[](std::size_t bytes, const std::nothrow_t&) noexcept
 {
   /*{
     ULONG f;
@@ -185,13 +185,13 @@ void *operator new[](std::size_t bytes, const std::nothrow_t&) throw()
 
 /*******************************************************************/
 
-APTR operator new(size_t bytes) throw()
+void* operator new(std::size_t bytes)
 {
   //NewRawDoFmt("......!!! New %ld\n",(void * (*)(void *, UBYTE))1,NULL,bytes);
   return _MALLOC(bytes);
 }
 
-void* operator new[](size_t t) throw ()
+void* operator new[](std::size_t t)
 {
   //NewRawDoFmt("......!!! New[] %ld\n",(void * (*)(void *, UBYTE))1,NULL,t);
   return operator new(t);

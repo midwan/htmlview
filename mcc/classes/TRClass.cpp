@@ -75,9 +75,9 @@ BOOL TRClass::TRLayout (struct LayoutMessage &lmsg)
 			lmsg.Indent = 0;
 			td->TDLayout(lmsg);
 			if(td->RowSpan == 1)
-				Bottom = max(lmsg.Y, Bottom);
+				Bottom = MAX(lmsg.Y, Bottom);
 
-			lmsg.Heights[td->RowSpan-1] = max((ULONG)lmsg.Y, lmsg.Heights[td->RowSpan-1]);
+			lmsg.Heights[td->RowSpan-1] = MAX((ULONG)lmsg.Y, lmsg.Heights[td->RowSpan-1]);
 
 			lmsg.MinX += delta;
 			lmsg.X += delta;
@@ -86,7 +86,7 @@ BOOL TRClass::TRLayout (struct LayoutMessage &lmsg)
 		}
 
 		if(!FirstChild)
-			*lmsg.Heights = max((ULONG)Top + 2*lmsg.Padding, *lmsg.Heights);
+			*lmsg.Heights = MAX((ULONG)Top + 2*lmsg.Padding, *lmsg.Heights);
 
 		if(*lmsg.Heights)
 				lmsg.Y = *lmsg.Heights;
@@ -134,7 +134,7 @@ BOOL TRClass::TRLayout (struct LayoutMessage &lmsg)
 				td->AdjustPosition(0, offset);
 			}
 			td->setBottom(bottom-1);
-			Bottom = max(td->bottom(), Bottom);
+			Bottom = MAX(td->bottom(), Bottom);
 
 			first = first->Next;
 		}
@@ -184,7 +184,7 @@ VOID TRClass::CountCells (struct CountCellsMessage &cmsg)
 	}
 
 	cmsg.Rows++;
-	cmsg.Columns = max(cmsg.Columns, t_columns);
+	cmsg.Columns = MAX(cmsg.Columns, t_columns);
 }
 
 VOID TRClass::TRMinMax (struct MinMaxMessage &mmsg)

@@ -53,7 +53,7 @@ BOOL TDClass::TDLayout (struct LayoutMessage &lmsg)
   lmsg.FlushImages(Flush_All);
   lmsg.AddYSpace(lmsg.Padding);
   Bottom = lmsg.Y;
-  lmsg.Y = max(lmsg.Y, (LONG)(Top+Height));
+  lmsg.Y = MAX(lmsg.Y, (LONG)(Top+Height));
   lmsg.MinX = lmsg.X -= lmsg.Padding;
   lmsg.Align = oldalign;
 
@@ -107,7 +107,7 @@ VOID TDClass::TDMinMax (struct MinMaxMessage &mmsg)
       Min = mmsg.Min + 2*mmsg.Padding;
       if(GivenWidth && GivenWidth->Type == Size_Pixels)
       {
-        Min = Max = max(GivenWidth->Size, Min);
+        Min = Max = MAX(GivenWidth->Size, Min);
         mmsg.Widths->Fixed = TRUE;
       }
       else
@@ -120,8 +120,8 @@ VOID TDClass::TDMinMax (struct MinMaxMessage &mmsg)
 
       if(ColSpan == 1)
       {
-        mmsg.Widths->Min = max(Min, mmsg.Widths->Min);
-        mmsg.Widths->Max = max(Max, mmsg.Widths->Max);
+        mmsg.Widths->Min = MAX(Min, mmsg.Widths->Min);
+        mmsg.Widths->Max = MAX(Max, mmsg.Widths->Max);
         if(GivenWidth)
         {
           if(GivenWidth->Type == Size_Percent)
@@ -199,7 +199,7 @@ VOID TDClass::TDMinMax (struct MinMaxMessage &mmsg)
               UWORD cell_delta = mmsg.Widths[i].Max - mmsg.Widths[i].Min;
               ULONG width = (cell_delta * scale) / row_delta;
               mmsg.Widths[i].Min += width;
-              mmsg.Widths[i].Max = max(mmsg.Widths[i].Min, mmsg.Widths[i].Max);
+              mmsg.Widths[i].Max = MAX(mmsg.Widths[i].Min, mmsg.Widths[i].Max);
             }
           }
           else

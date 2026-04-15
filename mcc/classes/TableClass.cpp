@@ -98,7 +98,7 @@ BOOL TableClass::Layout (struct LayoutMessage &lmsg)
 
     Top = lmsg.Y;
     Left = lmsg.X;
-    lmsg.TopChange = min(Top, lmsg.TopChange);
+    lmsg.TopChange = MIN(Top, lmsg.TopChange);
 
     if(!(Flags & FLG_KnowsMinMax))
     {
@@ -111,12 +111,12 @@ BOOL TableClass::Layout (struct LayoutMessage &lmsg)
     if(GivenWidth)
     {
       if(GivenWidth->Type == Size_Percent)
-         Width = max(Min, ((lmsg.ScrWidth() * GivenWidth->Size) / 100) - (Columns+1)*Spacing - 2*BorderSize);
+         Width = MAX(Min, ((lmsg.ScrWidth() * GivenWidth->Size) / 100) - (Columns+1)*Spacing - 2*BorderSize);
       else
-            Width = max(GivenWidth->Size-(Columns+1)*Spacing-2*BorderSize, Min);
+            Width = MAX(GivenWidth->Size-(Columns+1)*Spacing-2*BorderSize, Min);
     }
     else
-         Width = (Min <= scr_width) ? min(scr_width, Max) : Min;
+         Width = (Min <= scr_width) ? MIN(scr_width, Max) : Min;
 
     /* Set all cells to their min or max width */
     LONG scale = Width, table_delta = 0, relative = 0;
@@ -137,7 +137,7 @@ BOOL TableClass::Layout (struct LayoutMessage &lmsg)
     {
       if(Widths[i].Percent)
       {
-        ULONG cellwidth = max(Widths[i].Min, min((ULONG)scale, (Width * Widths[i].Percent) / 100));
+        ULONG cellwidth = MAX(Widths[i].Min, MIN((ULONG)scale, (Width * Widths[i].Percent) / 100));
         Widths[i].Width = cellwidth;
         scale -= cellwidth;
       }
@@ -212,7 +212,7 @@ BOOL TableClass::Layout (struct LayoutMessage &lmsg)
     /* Should some cell set a rowspan that ends outside the table, then we enlarge all height entries */
     while(realrows < Rows)
     {
-      Heights[realrows] = max(Heights[realrows], Heights[realrows-1]);
+      Heights[realrows] = MAX(Heights[realrows], Heights[realrows-1]);
       realrows++;
     }
 
@@ -250,7 +250,7 @@ BOOL TableClass::Layout (struct LayoutMessage &lmsg)
 
     lmsg.Font = oldfont;
 
-    lmsg.Width = max((ULONG)lmsg.Width, lmsg.MinX+Width+((Columns+1)*Spacing)+2*BorderSize+lmsg.MarginWidth+lmsg.ImageRightIndent);
+    lmsg.Width = MAX((ULONG)lmsg.Width, lmsg.MinX+Width+((Columns+1)*Spacing)+2*BorderSize+lmsg.MarginWidth+lmsg.ImageRightIndent);
 
     Bottom = lmsg.Y-1;
     lmsg.AddYSpace(4);
@@ -297,7 +297,7 @@ BOOL TableClass::Layout (struct LayoutMessage &lmsg)
   }
   else
   {
-    lmsg.TopChange = min(lmsg.TopChange, MAX_HEIGHT);
+    lmsg.TopChange = MIN(lmsg.TopChange, MAX_HEIGHT);
   }
 
    return TRUE;
@@ -392,7 +392,7 @@ VOID TableClass::MinMax (struct MinMaxMessage &mmsg)
   Rows = cmsg->Rows;
   ULONG extra = 0;
   for(UWORD c = 0; c < cmsg->OpenRows; c++)
-    extra = max(extra, cmsg->RowSpan[c]);
+    extra = MAX(extra, cmsg->RowSpan[c]);
   Rows += extra;
   delete cmsg;
 
@@ -438,11 +438,11 @@ VOID TableClass::MinMax (struct MinMaxMessage &mmsg)
   }
 
   mmsg.Newline();
-  mmsg.Min = max(mmsg.Indent + Min + (Columns+1)*Spacing+2*BorderSize, (ULONG)mmsg.Min);
-  mmsg.Max = max(mmsg.Indent + Max + (Columns+1)*Spacing+2*BorderSize, (ULONG)mmsg.Max);
+  mmsg.Min = MAX(mmsg.Indent + Min + (Columns+1)*Spacing+2*BorderSize, (ULONG)mmsg.Min);
+  mmsg.Max = MAX(mmsg.Indent + Max + (Columns+1)*Spacing+2*BorderSize, (ULONG)mmsg.Max);
 
   if(GivenWidth && GivenWidth->Type == Size_Pixels)
-    mmsg.Min = mmsg.Max = max(GivenWidth->Size, (ULONG)mmsg.Min);
+    mmsg.Min = mmsg.Max = MAX(GivenWidth->Size, (ULONG)mmsg.Min);
 
   Flags |= FLG_KnowsMinMax;
 }

@@ -30,7 +30,7 @@
 extern "C" {
 #endif
 
-//DISPATCHERPROTO(ScrollGroupDispatcher);
+CPPDISPATCHERPROTO(ScrollGroupDispatcher);
 extern ULONG GetScrollGroupDataSize(void);
 extern struct MUI_CustomClass *ScrollGroupClass;
 

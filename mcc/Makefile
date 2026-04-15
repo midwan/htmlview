@@ -168,8 +168,9 @@ ifeq ($(OS), os4)
   CPU      = -mcpu=powerpc
   WARN     += -Wno-unused-parameter -Wno-narrowing -Wno-sign-compare
   CFLAGS   += -mcrt=$(CRT) -D__USE_INLINE__ -D__NEW_TIMEVAL_DEFINITION_USED__ \
-              -D__USE_CLASSIC_MINTERM__ -Wa,-mregnames -DNO_PPCINLINE_STDARG
-  LDFLAGS  += -mcrt=$(CRT)
+              -D__USE_CLASSIC_MINTERM__ -Wa,-mregnames -DNO_PPCINLINE_STDARG \
+              -fno-exceptions -fno-threadsafe-statics
+  LDFLAGS  += -mcrt=$(CRT) -nostartfiles
 
   # additional object files required
   M68KSTUBS = $(OBJDIR)/mccclass_68k.o
@@ -212,7 +213,7 @@ ifeq ($(OS), mos)
   # Compiler/Linker flags
   CPU     = -mcpu=powerpc
   CFLAGS  += -noixemul -DNO_PPCINLINE_STDARG
-  LDFLAGS += -noixemul
+  LDFLAGS += -noixemul -nostartfiles -shared
   ifneq ($(DEBUG),)
     LDLIBS += -ldebug
   endif
@@ -405,6 +406,10 @@ MCCOBJS += \
 
 TESTOBJS += \
           $(OBJDIR)/vastubs.o
+endif
+
+ifeq ($(OS), os4)
+MCCOBJS += $(M68KSTUBS)
 endif
 
 # available catalog translations

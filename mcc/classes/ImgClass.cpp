@@ -237,7 +237,7 @@ BOOL ImgClass::Layout (struct LayoutMessage &lmsg)
     if (!img) return FALSE;
     Left = lmsg.AddImage(img, Alignment == Align_Right);
 
-    lmsg.TopChange = min(lmsg.TopChange, Top);
+    lmsg.TopChange = MIN(lmsg.TopChange, Top);
   }
   else
   {
@@ -316,7 +316,7 @@ VOID ImgClass::MinMax (struct MinMaxMessage &mmsg)
   if(Alignment == Align_Left)
     width += 5;
 
-  mmsg.Min = max(width, mmsg.Min);
+  mmsg.Min = MAX(width, mmsg.Min);
   mmsg.X += width;
 
   Flags |= FLG_KnowsMinMax;

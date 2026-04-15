@@ -180,6 +180,9 @@
     {{NULL, NULL}, (HOOKFUNC)HookEntry, (HOOKFUNC)funcname, (APTR)data}
   #define MakeStaticHook(hookname, funcname) static struct Hook hookname =   \
     {{NULL, NULL}, (HOOKFUNC)HookEntry, (HOOKFUNC)funcname, NULL}
+  #define MakeCppHook(hookname, funcname) MakeHook(hookname, funcname)
+  #define MakeCppHookWithData(hookname, funcname, data) MakeHookWithData(hookname, funcname, data)
+  #define MakeStaticCppHook(hookname, funcname) MakeStaticHook(hookname, funcname)
   #define DISPATCHERPROTO(name) ULONG name(struct IClass * cl, Object * obj, \
     Msg msg);                                                                \
     extern const struct SDI_EmulLibEntry Gate_##name
@@ -188,6 +191,7 @@
     ULONG name(struct IClass * cl, Object * obj, Msg msg);                   \
     static ULONG Trampoline_##name(void) {return name((struct IClass *)      \
     REG_A0, (Object *) REG_A2, (Msg) REG_A1);}                               \
+    extern const struct SDI_EmulLibEntry Gate_##name;                        \
     const struct SDI_EmulLibEntry Gate_##name = {SDI_TRAP_LIB, 0,            \
     (APTR) Trampoline_##name};                                               \
     ULONG name(struct IClass * cl, Object * obj, Msg msg)
@@ -246,6 +250,12 @@
     (APTR) Trampoline_##name};                                               \
     static STDARGS SAVEDS void name(type1 param1, type2 param2)
   #define ENTRY(func) (APTR)&Gate_##func
+
+  // MorphOS-specific CPP dispatcher macros
+  #define CPPDISPATCHERPROTO(name) DISPATCHERPROTO(name)
+  #define CPPDISPATCHER(name) DISPATCHER(name)
+  #define CPPDISPATCHERENTRY(name) ENTRY(name)
+  #define CPPDISPATCHERGATE(name) /* no-op for MorphOS */
 
 #elif defined(__AROS__)
   #include <proto/alib.h>
@@ -326,7 +336,7 @@
     static STDARGS SAVEDS void name(type1 param1, type2 param2)
   #define ENTRY(func) (APTR)func
 
-  #if defined(__amigaos4_)
+  #if defined(__amigaos4__)
     #define CPPDISPATCHERPROTO(name) DISPATCHERPROTO(name)
     #define CPPDISPATCHER(name)      DISPATCHERPROTO(name)
     #define CPPDISPATCHERENTRY(name) ENTRY(name)

@@ -86,9 +86,9 @@ BOOL AreaClass::UseMap (struct UseMapMessage &umsg)
         /* y1 > y && y > y2 && (x1*(y-y2) + x2*(y1-y)) < x*(y1-y2) */
         if(top < y && bottom >= y)
         {
-          if(max(first->X, second->X) <= x)
+          if(MAX(first->X, second->X) <= x)
             inside++;
-          else if(min(first->X, second->X) < x)
+          else if(MIN(first->X, second->X) < x)
           {
             LONG divide_width = bottom-top;
             if(divide_width > 0)

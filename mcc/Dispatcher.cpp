@@ -1033,7 +1033,7 @@ CPPDISPATCHER(_Dispatcher)
       sprintf(str_args, "%lx", (ULONG)args);*/
 
       data->ParseThread = CreateNewProcTags(
-        NP_Entry,     (ULONG)ENTRY(ParseThread),
+        NP_Entry,     (ULONG)ParseThread,
         NP_Name,      (ULONG)data->ParseThreadName,
         #if !defined(__MORPHOS__)
         NP_StackSize, 512*1024,

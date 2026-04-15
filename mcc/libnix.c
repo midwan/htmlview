@@ -54,7 +54,7 @@ extern const struct CTDT    __ctdtlist[];
 
 void __chkabort(void) { }
 void abort(void) { Wait(0);}
-void exit(int UNUSED err) { Wait(0);}
+void exit(int err) { (void)err; Wait(0);}
 
 /*******************************************************************/
 

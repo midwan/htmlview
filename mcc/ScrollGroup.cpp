@@ -33,7 +33,7 @@
 
 #if defined(__MORPHOS__)
 #undef NewObject
-extern "C" APTR NewObject ( struct IClass *classPtr , STRPTR classID , ...);
+extern "C" APTR NewObject ( struct IClass *classPtr , CONST_STRPTR classID , ULONG tag1, ...);
 #undef MUI_NewObject
 #endif
 

@@ -51,7 +51,7 @@ BOOL HRClass::Layout (struct LayoutMessage &lmsg)
       Left += lmsg.ScrWidth() - width;
   }
   else
-    lmsg.Width = max(lmsg.X + width + lmsg.MarginWidth, (ULONG)lmsg.Width);
+    lmsg.Width = MAX(lmsg.X + width + lmsg.MarginWidth, (ULONG)lmsg.Width);
 
   Right = Left + width - 1;
 

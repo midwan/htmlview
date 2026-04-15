@@ -41,8 +41,9 @@ VOID FreeConfig (struct IClass *cl, Object *obj, struct HTMLviewData *data);
 VOID ObtainShineShadowPens (struct ColorMap *cmap, ULONG rgb, LONG &shine, LONG &shadow);
 VOID BltMaskRPort (struct BitMap *source, WORD srcLeft,WORD srcTop, struct RastPort *destination, WORD dstLeft,WORD dstTop,WORD dstWidth,WORD dstHeight, UBYTE *maskPlane);
 
-#define min(a, b) (a < b ? a : b)
-#define max(a, b) (a > b ? a : b)
+// MIN/MAX macros - uppercase to avoid conflict with C++ std::min/std::max
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 /// xget()
 //  Gets an attribute value from a MUI object

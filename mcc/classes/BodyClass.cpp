@@ -113,7 +113,7 @@ BOOL BodyClass::Layout (struct LayoutMessage &lmsg)
     lmsg.EnsureNewline();
     lmsg.FlushImages(Flush_All);
     lmsg.AddYSpace(5);
-    Bottom = lmsg.Height = max(lmsg.MaxY-1+lmsg.MarginHeight, lmsg.Y);
+    Bottom = lmsg.Height = MAX(lmsg.MaxY-1+lmsg.MarginHeight, lmsg.Y);
 
     //D(DBF_ALWAYS, "LayoutStack: %ld", LayoutStack);
   }

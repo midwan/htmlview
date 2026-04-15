@@ -78,7 +78,10 @@ extern void _fini(void);
 extern ULONG GetHTMLviewDataSize(void);
 
 /* Dummy exit for libnix linkage in shared library. Application links against standard CRT. */
+/* Don't define for MorphOS - libnix.c already provides exit() */
+#if !defined(__MORPHOS__)
 void exit(int s) { (void)s; while(1); }
+#endif
 
 CPPDISPATCHERGATE(_Dispatcher);
 CPPDISPATCHERGATE(ScrollGroupDispatcher);

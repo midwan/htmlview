@@ -36,7 +36,7 @@
 
 #if defined(__MORPHOS__)
 #undef NewObject
-extern "C" APTR NewObject ( struct IClass *classPtr , STRPTR classID , ...);
+extern "C" APTR NewObject ( struct IClass *classPtr , CONST_STRPTR classID , ULONG tag1, ...);
 #undef MUI_NewObject
 #endif
 
@@ -133,7 +133,7 @@ VOID TextAreaClass::MinMax (struct MinMaxMessage &mmsg)
   {
     ULONG width = _minwidth(MUIGadget);
     mmsg.X += width;
-    mmsg.Min = max(width, (ULONG)mmsg.Min);
+    mmsg.Min = MAX(width, (ULONG)mmsg.Min);
   }
 }
 

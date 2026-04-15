@@ -116,7 +116,7 @@ BOOL LIClass::Layout (struct LayoutMessage &lmsg)
     lmsg.X -= width+4;
     lmsg.Indent -= width+4;
 
-    lmsg.TopChange = min(lmsg.TopChange, Top);
+    lmsg.TopChange = MIN(lmsg.TopChange, Top);
   }
 
    return TRUE;
@@ -214,7 +214,7 @@ VOID LIClass::Render (struct RenderMessage &rmsg)
 
           ULONG index = 0;
           if(rmsg.UL_Nesting > 1)
-            index = width * min(rmsg.UL_Nesting-1, 2);
+            index = width * MIN(rmsg.UL_Nesting-1, 2);
 
           if(rmsg.Share->LI_Mask)
               BltMaskRPort(rmsg.Share->LI_BMp, index, 0, rp, x, y, width, height, rmsg.Share->LI_Mask);

@@ -228,7 +228,7 @@ ULONG HostClass::HandleEvent (Object *obj, struct IClass *cl UNUSED, struct MUIP
           if(MatchKey(imsg, event, data->Share->PageScrollKey))
           {
             LONG scroll_height = (data->Height*data->Share->PageScrollMove) / 100;
-            LONG bottom = min(data->VirtHeight-data->Height, data->Top + scroll_height);
+            LONG bottom = MIN(data->VirtHeight-data->Height, data->Top + scroll_height);
             LONG top = data->Top, height = (bottom - top) / 2;
             if(height)
             {

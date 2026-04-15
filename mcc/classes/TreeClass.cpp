@@ -220,21 +220,21 @@ BOOL TreeClass::Layout (struct LayoutMessage &lmsg)
         complete = FALSE;
         break;
       }
-      Bottom = max(Bottom, first->Obj->bottom());
+      Bottom = MAX(Bottom, first->Obj->bottom());
     }
     first = first->Next;
   }
 
   if(complete)
   {
-    Bottom = max(Bottom, lmsg.Y + lmsg.Baseline + lmsg.Bottom - 1);
+    Bottom = MAX(Bottom, lmsg.Y + lmsg.Baseline + lmsg.Bottom - 1);
 
     struct FloadingImage *img = lmsg.FLeft;
     while(img)
     {
       if(img->Container == (class SuperClass *)this)
       {
-        Bottom = max(Bottom, img->Top + img->Height);
+        Bottom = MAX(Bottom, img->Top + img->Height);
       }
       img = img->Next;
     }
@@ -244,7 +244,7 @@ BOOL TreeClass::Layout (struct LayoutMessage &lmsg)
     {
       if(img->Container == (class SuperClass *)this)
       {
-        Bottom = max(Bottom, img->Top + img->Height);
+        Bottom = MAX(Bottom, img->Top + img->Height);
       }
       img = img->Next;
     }

@@ -9,7 +9,11 @@
 extern void kprintf(const char *fmt, ...);
 
 struct Library *MUIMasterBase;
+#if defined(__amigaos4__)
+struct Library *IntuitionBase;
+#else
 struct IntuitionBase *IntuitionBase;
+#endif
 struct Library *UtilityBase;
 
 // Simple MUI macros if missing

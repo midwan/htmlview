@@ -34,7 +34,7 @@
 
 #if defined(__MORPHOS__)
 #undef NewObject
-extern "C" APTR NewObject ( struct IClass *classPtr , STRPTR classID , ...);
+extern "C" APTR NewObject ( struct IClass *classPtr , CONST_STRPTR classID , ULONG tag1, ...);
 #undef MUI_NewObject
 #endif
 
@@ -113,7 +113,7 @@ VOID IsIndexClass::MinMax (struct MinMaxMessage &mmsg)
   {
     ULONG width = _minwidth(MUIGadget);
     mmsg.X += width;
-    mmsg.Min = max((LONG)width, mmsg.Min);
+    mmsg.Min = MAX((LONG)width, mmsg.Min);
   }
 }
 

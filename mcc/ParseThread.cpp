@@ -45,7 +45,7 @@
 ULONG StackUsage = 0;
 VOID StackCheck ()
 {
-  StackUsage = max(StackUsage, (ULONG)FindTask(NULL)->tc_SPUpper-StackReg());
+  StackUsage = MAX(StackUsage, (ULONG)FindTask(NULL)->tc_SPUpper-StackReg());
 }*/
 
 /*static struct SignalSemaphore mutex;

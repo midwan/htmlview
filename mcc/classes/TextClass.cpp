@@ -297,11 +297,11 @@ BOOL TextClass::Mark (struct MarkMessage &mmsg)
   {
     if(MarkBegin != begin || MarkEnd != end)
     {
-      LONG b = min(MarkBegin, begin), e = max(MarkEnd, end);
+      LONG b = MIN(MarkBegin, begin), e = MAX(MarkEnd, end);
       if(MarkBegin == begin)
-        b = min(MarkEnd, end);
+        b = MIN(MarkEnd, end);
       else if(MarkEnd == end)
-        e = max(MarkBegin, begin);
+        e = MAX(MarkBegin, begin);
       else if(MarkBegin == MarkEnd)
       {
         b = begin;
@@ -415,13 +415,13 @@ VOID TextClass::MinMax (struct MinMaxMessage &mmsg)
 
       if(Contents[l+i] == '\n')
       {
-        mmsg.Min = max(mmsg.X, (ULONG)mmsg.Min);
+        mmsg.Min = MAX(mmsg.X, (ULONG)mmsg.Min);
         mmsg.Newline();
         l++;
       }
       l += i;
     }
-    mmsg.Min = max(mmsg.X, (ULONG)mmsg.Min);
+    mmsg.Min = MAX(mmsg.X, (ULONG)mmsg.Min);
   }
   else
   {
@@ -434,7 +434,7 @@ VOID TextClass::MinMax (struct MinMaxMessage &mmsg)
       while(Contents[i+length] && Contents[i+length] != ' ')
         length++;
 
-      mmsg.Min = max(mmsg.Indent + MyTextLength(mmsg.Font, Contents+i, length), (ULONG)mmsg.Min);
+      mmsg.Min = MAX(mmsg.Indent + MyTextLength(mmsg.Font, Contents+i, length), (ULONG)mmsg.Min);
 
       i += length;
       if(Contents[i] == ' ')
