@@ -578,14 +578,6 @@ CPPDISPATCHER(_Dispatcher)
         b = bmsg->bottom;
 
 	  	if (l>r || t>b) return 0;
-
-  		if (!(l==_mleft(obj) && t==_mtop(obj) && r==_mright(obj) && b==_mbottom(obj)))
-        {
-	        D(DBF_ALWAYS, "HTMLview: %ld %ld, %ld %ld, %ld %ld, %ld %ld",
-  		  	l,_mleft(obj),t,_mtop(obj),r,_mright(obj),b,_mbottom(obj));
-
-            return 0;
-          }
 	  }
 
       struct RastPort *rp = _rp(obj);
@@ -1011,7 +1003,7 @@ CPPDISPATCHER(_Dispatcher)
 
       STRPTR url = new (std::nothrow) char[strlen(pmsg->URL)+20];
       if (!url) return 0;
-      sprintf(url, "%s?{%lu}¿", pmsg->URL, data->PageID);
+      sprintf(url, "%s?{%lu}ï¿½", pmsg->URL, data->PageID);
 
       SetAttrs(data->Share->Obj,
           MUIA_HTMLview_ClickedURL, (ULONG)pmsg->URL,
