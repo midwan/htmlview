@@ -41,6 +41,7 @@
 
 #ifdef __MORPHOS__
 extern struct MUI_CustomClass *PicClass;
+extern ULONG initPicClass(void);
 #define PREFSIMAGEOBJECT \
   NewObject(PicClass->mcc_Class, NULL, End
 #else
@@ -111,7 +112,7 @@ ULONG xget(Object *obj, const ULONG attr);
 #endif
 ///
 
-#if defined(__MORPHOS__)
+#if defined(__MORPHOS__) && INCLUDE_VERSION < 45
 #undef NewObject
 #undef MUI_NewObject
 APTR NewObject ( struct IClass *classPtr , STRPTR classID , ...);

@@ -204,7 +204,7 @@ ifeq ($(OS), mos)
 
   # Compiler/Linker flags
   CPU     = -mcpu=powerpc
-  CFLAGS  += -noixemul -DNO_PPCINLINE_STDARG
+  CFLAGS  += -noixemul -DNO_PPCINLINE_STDARG -DUSEHOTKEY -DUSEBETTERSTRING
   LDFLAGS += -noixemul
   ifneq ($(DEBUG),)
     LDLIBS += -ldebug

@@ -17,9 +17,7 @@
 
 extern struct Library *CyberGfxBase;
 
-/*#include <proto/exec.h>
-#define NewRawDoFmt(__p0, __p1, __p2, ...) \
-	(((STRPTR (*)(void *, CONST_STRPTR , APTR (*)(APTR, UBYTE), STRPTR , ...))*(void**)((long)(EXEC_BASE_NAME) - 922))((void*)(EXEC_BASE_NAME), __p0, __p1, __p2, __VA_ARGS__))*/
+#include <proto/exec.h>
 
 /***********************************************************************/
 

@@ -171,6 +171,7 @@ ifeq ($(OS), os4)
               -D__USE_CLASSIC_MINTERM__ -Wa,-mregnames -DNO_PPCINLINE_STDARG \
               -fno-exceptions -fno-threadsafe-statics
   LDFLAGS  += -mcrt=$(CRT) -nostartfiles
+  LDLIBS   += -lauto
 
   # additional object files required
   M68KSTUBS = $(OBJDIR)/mccclass_68k.o
@@ -417,7 +418,12 @@ CATALOGS = $(LOCALE)/deutsch.catalog
 
 #
 
-all: $(BINDIR) $(OBJDIR) $(MCCTARGET) $(SIMPLETARGET)
+# Skip SimpleTest for OS4 due to interface linking issues
+ifeq ($(OS), os4)
+  all: $(BINDIR) $(OBJDIR) $(MCCTARGET)
+else
+  all: $(BINDIR) $(OBJDIR) $(MCCTARGET) $(SIMPLETARGET)
+endif
 
 # make the object directories
 $(OBJDIR):
@@ -452,7 +458,11 @@ LIBOBJS = $(filter-out $(OBJDIR)/library.o $(OBJDIR)/crtclasses_begin.o $(OBJDIR
 
 $(SIMPLETARGET): $(OBJDIR)/SimpleTest.o
 	@echo "  LD    $@"
+ifneq ($(OS), os4)
 	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/SimpleTest.o $(LDLIBS) -ldebug -Wl,-Map,$@.map
+else
+	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/SimpleTest.o $(LDLIBS) -Wl,-Map,$@.map
+endif
 	@$(STRIP) --preserve-dates -R.comment -R.sdata2 -S -o $@ $@.debug
 
 
