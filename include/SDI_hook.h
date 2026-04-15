@@ -322,9 +322,16 @@
       {{NULL, NULL}, (ULONG (*)())HookEntry, (ULONG (*)())funcname, NULL}
   #endif
 
-  #define DISPATCHERPROTO(name) SAVEDS ASM IPTR name(REG(a0,                 \
-    struct IClass * cl), REG(a2, Object * obj), REG(a1, Msg msg))
-  #define DISPATCHER(name) DISPATCHERPROTO(name)
+  #ifdef __cplusplus
+    #define DISPATCHERPROTO(name) extern "C" SAVEDS ASM IPTR name(REG(a0,       \
+      struct IClass * cl), REG(a2, Object * obj), REG(a1, Msg msg))
+    #define DISPATCHER(name) extern "C" SAVEDS ASM IPTR name(REG(a0,           \
+      struct IClass * cl), REG(a2, Object * obj), REG(a1, Msg msg))
+  #else
+    #define DISPATCHERPROTO(name) SAVEDS ASM IPTR name(REG(a0,                 \
+      struct IClass * cl), REG(a2, Object * obj), REG(a1, Msg msg))
+    #define DISPATCHER(name) DISPATCHERPROTO(name)
+  #endif
   #define SDISPATCHER(name) static DISPATCHERPROTO(name)
   #define CROSSCALL1(name, ret, type1, param1)                               \
     static STDARGS SAVEDS ret name(type1 param1)
@@ -338,7 +345,8 @@
 
   #if defined(__amigaos4__)
     #define CPPDISPATCHERPROTO(name) DISPATCHERPROTO(name)
-    #define CPPDISPATCHER(name)      DISPATCHERPROTO(name)
+    #define CPPDISPATCHER(name)      DISPATCHER(name)
+    #define CPPDISPATCHERGATE(name) /* no-op for OS4 */
     #define CPPDISPATCHERENTRY(name) ENTRY(name)
   #else
     // the AmigaOS3 g++ 2.95.3 cannot handle explicit register definitions and
