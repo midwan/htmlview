@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Build mcc
         uses: docker://sacredbanana/amiga-compiler:m68k-amigaos
@@ -28,7 +28,7 @@ jobs:
           args: sh -c "cd mcp && make OS=os3 DEBUG="
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: htmlview-os3
           path: |
