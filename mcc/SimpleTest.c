@@ -6,7 +6,11 @@
 #include <libraries/mui.h>
 #include <stdio.h>
 
+#if defined(__amigaos4__)
+#define kprintf(...) ((void)0)
+#else
 extern void kprintf(const char *fmt, ...);
+#endif
 
 struct Library *MUIMasterBase;
 #if defined(__amigaos4__)

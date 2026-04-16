@@ -455,12 +455,20 @@ LIBOBJS = $(filter-out $(OBJDIR)/library.o $(OBJDIR)/crtclasses_begin.o $(OBJDIR
 
 $(SIMPLETARGET): $(OBJDIR)/SimpleTest.o
 	@echo "  LD    $@"
+ifneq (,$(DEBUG))
 	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/SimpleTest.o $(LDLIBS) -ldebug -Wl,-Map,$@.map
+else
+	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/SimpleTest.o $(LDLIBS) -Wl,-Map,$@.map
+endif
 	@$(STRIP) --preserve-dates -R.comment -R.sdata2 -S -o $@ $@.debug
 
 $(LIBLOADTARGET): $(OBJDIR)/LibLoad_Test.o
 	@echo "  LD    $@"
+ifneq (,$(DEBUG))
 	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/LibLoad_Test.o $(LDLIBS) -ldebug -Wl,-Map,$@.map
+else
+	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/LibLoad_Test.o $(LDLIBS) -Wl,-Map,$@.map
+endif
 	@$(STRIP) --preserve-dates -R.comment -R.sdata2 -S -o $@ $@.debug
 
 
