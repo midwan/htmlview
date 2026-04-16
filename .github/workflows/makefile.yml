@@ -31,6 +31,8 @@ jobs:
           name: htmlview-os3-${{ github.sha }}
           path: |
             mcc/bin_os3/*.mcc
+            mcc/bin_os3/SimpleTest
+            mcc/bin_os3/LibLoad_Test
             mcp/bin_os3/*.mcp
 
   build-os4:
@@ -51,6 +53,8 @@ jobs:
           name: htmlview-os4-${{ github.sha }}
           path: |
             mcc/bin_os4/*.mcc
+            mcc/bin_os4/SimpleTest
+            mcc/bin_os4/LibLoad_Test
             mcp/bin_os4/*.mcp
 
   build-morphos:
@@ -71,6 +75,8 @@ jobs:
           name: htmlview-morphos-${{ github.sha }}
           path: |
             mcc/bin_mos/*.mcc
+            mcc/bin_mos/SimpleTest
+            mcc/bin_mos/LibLoad_Test
             mcp/bin_mos/*.mcp
 
   release:

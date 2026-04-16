@@ -132,6 +132,7 @@ LOCALE = locale
 MCCTARGET = $(BINDIR)/HTMLview.mcc
 TESTTARGET= $(BINDIR)/HTMLview-Test
 SIMPLETARGET= $(BINDIR)/SimpleTest
+LIBLOADTARGET= $(BINDIR)/LibLoad_Test
 
 # Common compiler/linker flags
 WARN     = -W -Wall -Wwrite-strings
@@ -418,12 +419,8 @@ CATALOGS = $(LOCALE)/deutsch.catalog
 
 #
 
-# Skip SimpleTest for OS4 due to interface linking issues
-ifeq ($(OS), os4)
-  all: $(BINDIR) $(OBJDIR) $(MCCTARGET)
-else
-  all: $(BINDIR) $(OBJDIR) $(MCCTARGET) $(SIMPLETARGET)
-endif
+# Build test programs for all platforms
+all: $(BINDIR) $(OBJDIR) $(MCCTARGET) $(SIMPLETARGET) $(LIBLOADTARGET)
 
 # make the object directories
 $(OBJDIR):
@@ -458,11 +455,12 @@ LIBOBJS = $(filter-out $(OBJDIR)/library.o $(OBJDIR)/crtclasses_begin.o $(OBJDIR
 
 $(SIMPLETARGET): $(OBJDIR)/SimpleTest.o
 	@echo "  LD    $@"
-ifneq ($(OS), os4)
 	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/SimpleTest.o $(LDLIBS) -ldebug -Wl,-Map,$@.map
-else
-	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/SimpleTest.o $(LDLIBS) -Wl,-Map,$@.map
-endif
+	@$(STRIP) --preserve-dates -R.comment -R.sdata2 -S -o $@ $@.debug
+
+$(LIBLOADTARGET): $(OBJDIR)/LibLoad_Test.o
+	@echo "  LD    $@"
+	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/LibLoad_Test.o $(LDLIBS) -ldebug -Wl,-Map,$@.map
 	@$(STRIP) --preserve-dates -R.comment -R.sdata2 -S -o $@ $@.debug
 
 
@@ -496,6 +494,8 @@ catalogs: $(CATALOGS)
 clean:
 	-$(RM) $(MCCTARGET) $(MCCTARGET).debug $(MCCTARGET).map
 	-$(RM) $(TESTTARGET) $(TESTTARGET).debug $(TESTTARGET).map
+	-$(RM) $(SIMPLETARGET) $(SIMPLETARGET).debug $(SIMPLETARGET).map
+	-$(RM) $(LIBLOADTARGET) $(LIBLOADTARGET).debug $(LIBLOADTARGET).map
 	-$(RM) $(MCCOBJS) $(TESTOBJS) $(M68KSTUBS)
 
 .PHONY: distclean
