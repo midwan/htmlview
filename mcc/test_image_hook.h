@@ -401,12 +401,12 @@ static int THL_TlsWrap(struct THL_State *st, const char *host)
     if (h <= 0)
     {
         int err = SSL_get_error(st->ssl, h);
-        sprintf(logbuf, "https: SSL_connect failed rc=%d err=%d", h, err);
+        snprintf(logbuf, sizeof(logbuf), "https: SSL_connect failed rc=%d err=%d", h, err);
         THL_Log(logbuf);
         return 0;
     }
 
-    sprintf(logbuf, "https: handshake OK cipher=%s", SSL_get_cipher(st->ssl));
+    snprintf(logbuf, sizeof(logbuf), "https: handshake OK cipher=%s", SSL_get_cipher(st->ssl));
     THL_Log(logbuf);
     return 1;
 }
@@ -452,7 +452,7 @@ static int THL_Connect(struct THL_State *st, const char *host, ULONG port, int u
 #endif
     if (!he)
     {
-        sprintf(logbuf, "http: gethostbyname(%s) failed", host);
+        snprintf(logbuf, sizeof(logbuf), "http: gethostbyname(%s) failed", host);
         THL_Log(logbuf);
         return 0;
     }
@@ -491,7 +491,7 @@ static int THL_DoRequest(struct THL_State *st, const char *host,
     char logbuf[320];
 
     char request[2048];
-    int rlen_s = sprintf(request,
+    int rlen_s = snprintf(request, sizeof(request),
         "GET %s HTTP/1.1\r\n"
         "Host: %s\r\n"
         "User-Agent: HTMLview-TestHook/1.2\r\n"
@@ -543,7 +543,7 @@ static int THL_DoRequest(struct THL_State *st, const char *host,
         n++;
     }
     status[n] = 0;
-    sprintf(logbuf, "http: status=%s", status);
+    snprintf(logbuf, sizeof(logbuf), "http: status=%s", status);
     THL_Log(logbuf);
 
     int code = 0;
@@ -576,10 +576,10 @@ static int THL_DoRequest(struct THL_State *st, const char *host,
     GRAB_HDR("Content-Type:",   "content-type:",   v_type, sizeof(v_type));
     GRAB_HDR("Content-Length:", "content-length:", v_len,  sizeof(v_len));
     GRAB_HDR("Content-Encoding:","content-encoding:", v_enc, sizeof(v_enc));
-    if (v_loc[0])  { sprintf(logbuf, "http: location=%s", v_loc);  THL_Log(logbuf); }
-    if (v_type[0]) { sprintf(logbuf, "http: content-type=%s", v_type); THL_Log(logbuf); }
-    if (v_len[0])  { sprintf(logbuf, "http: content-length=%s", v_len);  THL_Log(logbuf); }
-    if (v_enc[0])  { sprintf(logbuf, "http: content-encoding=%s", v_enc); THL_Log(logbuf); }
+    if (v_loc[0])  { snprintf(logbuf, sizeof(logbuf), "http: location=%s", v_loc);  THL_Log(logbuf); }
+    if (v_type[0]) { snprintf(logbuf, sizeof(logbuf), "http: content-type=%s", v_type); THL_Log(logbuf); }
+    if (v_len[0])  { snprintf(logbuf, sizeof(logbuf), "http: content-length=%s", v_len);  THL_Log(logbuf); }
+    if (v_enc[0])  { snprintf(logbuf, sizeof(logbuf), "http: content-encoding=%s", v_enc); THL_Log(logbuf); }
     #undef GRAB_HDR
 
     /* 3xx + Location => signal caller to reconnect. We don't handle relative
@@ -596,7 +596,7 @@ static int THL_DoRequest(struct THL_State *st, const char *host,
 
     if (code != 200)
     {
-        sprintf(logbuf, "http: aborting (status=%d)", code);
+        snprintf(logbuf, sizeof(logbuf), "http: aborting (status=%d)", code);
         THL_Log(logbuf);
         free(hdr);
         return 0;
@@ -618,7 +618,7 @@ static int THL_DoRequest(struct THL_State *st, const char *host,
         }
     }
 
-    sprintf(logbuf, "http: OK header_len=%lu body_have=%lu chunked=%d tls=%d",
+    snprintf(logbuf, sizeof(logbuf), "http: OK header_len=%lu body_have=%lu chunked=%d tls=%d",
             header_len, body_have, st->chunked, st->use_tls);
     THL_Log(logbuf);
 
@@ -654,12 +654,12 @@ static LONG THL_HttpOpen(CONST_STRPTR url, struct THL_State *st)
         if (!THL_ParseUrl(current, host, sizeof(host),
                           path, sizeof(path), &port, &is_https))
         {
-            sprintf(logbuf, "http: unparseable URL '%s'", current);
+            snprintf(logbuf, sizeof(logbuf), "http: unparseable URL '%s'", current);
             THL_Log(logbuf);
             return 0;
         }
 
-        sprintf(logbuf, "http: [hop %d] %s://%s:%lu%s",
+        snprintf(logbuf, sizeof(logbuf), "http: [hop %d] %s://%s:%lu%s",
                 hop, is_https ? "https" : "http", host, port, path);
         THL_Log(logbuf);
 
@@ -762,7 +762,7 @@ static ULONG TestImageHookFunc(struct Hook *hook, APTR obj,
                     : THL_Recv(st, out, len);
                 {
                     char logbuf[96];
-                    sprintf(logbuf, "read: recv(sock=%ld want=%ld) => %ld%s%s",
+                    snprintf(logbuf, sizeof(logbuf), "read: recv(sock=%ld want=%ld) => %ld%s%s",
                             st->socket, len, rd,
                             st->chunked ? " (chunked)" : "",
                             st->use_tls ? " (tls)" : "");
