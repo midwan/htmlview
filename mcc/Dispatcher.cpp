@@ -97,7 +97,10 @@ HOOKPROTONHNO(DefaultLoadFunc, ULONG, struct HTMLview_LoadMsg* lmsg)
   {
     case HTMLview_Open:
     {
-      STRPTR file = lmsg->lm_Params.lm_Open.URL+7;
+      STRPTR url = lmsg->lm_Params.lm_Open.URL;
+      STRPTR file = url;
+      if(!strncmp(url, "file://", 7))
+        file = url + 7;
       APTR result = lmsg->lm_Userdata = (APTR)Open(file, MODE_OLDFILE);
       return((ULONG)result);
     }

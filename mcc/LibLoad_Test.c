@@ -1,3 +1,4 @@
+
 #include <proto/exec.h>
 #include <proto/intuition.h>
 #include <proto/dos.h>
@@ -5,135 +6,263 @@
 #include <clib/alib_protos.h>
 #include <libraries/mui.h>
 #include <intuition/intuition.h>
-
-#ifndef MUIA_HTMLview_Contents
-#define MUIA_HTMLview_Contents 0xad003005
+#include <utility/tagitem.h>
+#if defined(__MORPHOS__)
+#include <net/socketbasetags.h>
+#elif defined(__amigaos4__)
+#include <bsdsocket/socketbasetags.h>
 #endif
+#include <stdio.h>
 
 #if defined(__amigaos4__)
-struct Library *IntuitionBase;
-struct Library *MUIMasterBase;
+struct Library        *IntuitionBase;
+struct Library        *MUIMasterBase;
 struct IntuitionIFace *IIntuition;
 struct MUIMasterIFace *IMUIMaster;
+struct Library        *SocketBase;
+struct SocketIFace    *ISocket;
 #else
 struct IntuitionBase *IntuitionBase;
-struct DosLibrary *DOSBase;
-struct Library *MUIMasterBase;
+struct Library       *MUIMasterBase;
+struct Library       *SocketBase;
 #endif
 
-static void ShowError(char *msg)
-{
-    struct EasyStruct es = {
-        sizeof(struct EasyStruct),
-        0,
-        (UBYTE *)"LibLoad_Test Error",
-        (UBYTE *)msg,
-        (UBYTE *)"OK"
-    };
-    EasyRequestArgs(NULL, &es, 0, NULL);
-}
+#include "test_image_hook.h"
 
-static void LogMsg(BPTR fh, char *msg)
-{
-    if (fh) VFPrintf(fh, "%s\n", (APTR)msg);
-}
+enum {
+    MSG_OPEN_HTMLVIEW = 1,
+    MSG_QUIT          = 2,
+};
+
+/* Same HTML as SimpleTest so the two programs cover identical capability
+   surface -- the difference being when the HTMLview window materialises
+   (dynamic load vs. up-front creation). */
+static const char *test_html =
+    "<html><body>"
+    "<h1>HTMLView MCC Test Suite</h1>"
+    "<p>This is the dynamic-load variant. The MCC is opened only when you "
+    "click the button, exercising the MUI class-path lookup.</p>"
+
+    "<h2>Images - Local Files</h2>"
+    "<p>Local image (PROGDIR:test.png):</p>"
+    "<p><img src=\"PROGDIR:test.png\" alt=\"Local test image\"></p>"
+    "<p>Sized: <img src=\"PROGDIR:test.png\" alt=\"Sized\" width=\"64\" height=\"64\"></p>"
+    "<p align=\"center\"><img src=\"PROGDIR:test.png\" alt=\"Centered\" width=\"96\" height=\"96\" border=\"2\"></p>"
+
+    "<h2>Images - Network (HTTP)</h2>"
+    "<p>Network images require bsdsocket.library:</p>"
+    "<p><img src=\"http://aminet.net/pics/aminet.png\" alt=\"Aminet Logo (HTTP)\"></p>"
+    "<p><img src=\"http://www.amigaworld.net/images/awn2.gif\" alt=\"AmigaWorld (HTTP)\"></p>"
+
+    "<h2>Text</h2>"
+    "<p><b>Bold</b>, <i>italic</i>, <u>under</u>, <s>strike</s>, <tt>tt</tt></p>"
+    "<p>Visit <a href=\"http://aminet.net\">Aminet</a> or "
+    "<a href=\"http://os4depot.net\">OS4Depot</a>.</p>"
+
+    "<h2>Headings</h2>"
+    "<h1>H1</h1><h2>H2</h2><h3>H3</h3><h4>H4</h4><h5>H5</h5><h6>H6</h6>"
+
+    "<h2>Lists</h2>"
+    "<ul><li>First</li><li>Second with <b>bold</b></li></ul>"
+    "<ol><li>Step one</li><li>Step two</li></ol>"
+    "<dl><dt>MCC</dt><dd>MUI Custom Class</dd></dl>"
+
+    "<h2>Tables</h2>"
+    "<table border=\"1\" width=\"100%\">"
+    "<tr><th>A</th><th>B</th><th>C</th></tr>"
+    "<tr><td>1</td><td>2</td><td>3</td></tr>"
+    "<tr><td>4</td><td><b>bold</b></td><td><a href=\"#\">link</a></td></tr>"
+    "</table>"
+
+    "<h2>Forms</h2>"
+    "<form>"
+    "<p>Text: <input type=\"text\" value=\"hi\"></p>"
+    "<p><input type=\"checkbox\" checked> a "
+    "<input type=\"checkbox\"> b</p>"
+    "<p><input type=\"radio\" name=\"g\" checked> yes "
+    "<input type=\"radio\" name=\"g\"> no</p>"
+    "<select><option>one</option><option selected>two</option></select>"
+    "<textarea rows=\"2\" cols=\"30\">default</textarea>"
+    "<p><input type=\"submit\"> <input type=\"reset\"></p>"
+    "</form>"
+
+    "<h2>Preformatted</h2>"
+    "<pre>int main() {\n    return 0;\n}</pre>"
+
+    "<h2>Colors &amp; Entities</h2>"
+    "<p><font color=\"red\">Red</font>, "
+    "<font color=\"green\">Green</font>, "
+    "<font color=\"blue\">Blue</font></p>"
+    "<p>&copy; &reg; &trade; &lt; &gt; &amp;</p>"
+
+    "<p align=\"center\"><b>End of Test Suite</b></p>"
+    "</body></html>";
 
 int main(int argc, char **argv)
 {
-    Object *app = NULL;
-    Object *win = NULL;
-    Object *html = NULL;
-    int result = 0;
-    BPTR fh = NULL;
+    Object *app = NULL, *mainWin = NULL, *htmlWin = NULL, *htmlObj = NULL, *btnOpen = NULL;
+    struct Hook loadHook;
+    ULONG signals = 0;
+    (void)argc;
+    (void)argv;
 
-    DOSBase = (struct DosLibrary *)OpenLibrary("dos.library", 0);
-    if (!DOSBase) return 20;
+    SocketBase = OpenLibrary("bsdsocket.library", 4);
+#if defined(__amigaos4__)
+    if (SocketBase)
+        ISocket = (struct SocketIFace *)GetInterface(SocketBase, "main", 1, NULL);
+#endif
+    /* Socket library is optional -- we still support local files without it. */
 
-    fh = Open("t:libload_test.txt", MODE_NEWFILE);
-
-    LogMsg(fh, "LibLoad_Test: Starting...");
-
-    IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 39);
-    if (!IntuitionBase)
-    {
-        LogMsg(fh, "Failed intuition.library");
-        if (fh) Close(fh);
-        ShowError("Failed to open intuition.library");
-        return 20;
-    }
-    LogMsg(fh, "Opened intuition.library OK");
-
+#if defined(__amigaos4__)
+    IntuitionBase = OpenLibrary("intuition.library", 39);
+    if (IntuitionBase)
+        IIntuition = (struct IntuitionIFace *)GetInterface(IntuitionBase, "main", 1, NULL);
     MUIMasterBase = OpenLibrary("muimaster.library", 19);
-    if (!MUIMasterBase)
+    if (MUIMasterBase)
+        IMUIMaster = (struct MUIMasterIFace *)GetInterface(MUIMasterBase, "main", 1, NULL);
+    if (!IntuitionBase || !MUIMasterBase || !IIntuition || !IMUIMaster)
+#else
+    IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 39);
+    MUIMasterBase = OpenLibrary("muimaster.library", 19);
+    if (!IntuitionBase || !MUIMasterBase)
+#endif
     {
-        LogMsg(fh, "Failed muimaster.library");
-        if (fh) Close(fh);
-        ShowError("Failed to open muimaster.library");
-        goto cleanup_intuition;
+        goto cleanup;
     }
-    LogMsg(fh, "Opened muimaster.library OK");
-    LogMsg(fh, "MUI will find HTMLview.mcc via its class path (MUI:Libs/mui)");
 
-    LogMsg(fh, "Creating MUI application...");
+    /* CallHookPkt on m68k and MorphOS passes args in registers (a0=hook,
+       a2=obj, a1=msg); our plain-C TestImageHookFunc expects stack args.
+       HookEntry is the amiga.lib trampoline that does the register->stack
+       conversion. On OS4 hooks are already called with stack args, and
+       HookEntry is not declared, so we assign directly. */
+#if defined(__amigaos4__)
+    loadHook.h_Entry    = (HOOKFUNC)TestImageHookFunc;
+    loadHook.h_SubEntry = NULL;
+#else
+    loadHook.h_Entry    = (HOOKFUNC)HookEntry;
+    loadHook.h_SubEntry = (HOOKFUNC)TestImageHookFunc;
+#endif
+    loadHook.h_Data     = NULL;
+
     app = MUI_NewObject(MUIC_Application,
-        MUIA_Application_Title, (ULONG)"LibLoad Test",
-        MUIA_Application_Version, (ULONG)"$VER: LibLoad_Test 1.0",
+        MUIA_Application_Title,      (ULONG)"LibLoad Test",
+        MUIA_Application_Version,    (ULONG)"$VER: LibLoad_Test 1.1 (18.4.2026)",
         MUIA_Application_SingleTask, TRUE,
-        MUIA_Application_Window, win = MUI_NewObject(MUIC_Window,
-            MUIA_Window_Title, (ULONG)"HTMLView Library Load Test",
-            MUIA_Window_RootObject, html = MUI_NewObject("HTMLview.mcc",
-                MUIA_Background, MUII_TextBack,
+        MUIA_Application_Window, mainWin = MUI_NewObject(MUIC_Window,
+            MUIA_Window_Title,  (ULONG)"HTMLView Library Load Test",
+            MUIA_Window_Width,  400,
+            MUIA_Window_Height, 200,
+            MUIA_Window_RootObject, MUI_NewObject(MUIC_Group,
+                MUIA_Group_Child, MUI_NewObject(MUIC_Text,
+                    MUIA_Text_Contents, (ULONG)
+                        "\nLibLoad Test Program\n\n"
+                        "Demonstrates loading HTMLview.mcc dynamically.\n"
+                        "Click the button to open the test document.\n",
+                    MUIA_Text_PreParse, (ULONG)"\33c",
+                    TAG_DONE),
+                MUIA_Group_Child, btnOpen = MUI_NewObject(MUIC_Text,
+                    MUIA_Frame,         MUIV_Frame_Button,
+                    MUIA_Text_Contents, (ULONG)"[ Open HTMLView Test ]",
+                    MUIA_Text_PreParse, (ULONG)"\33c",
+                    MUIA_InputMode,     MUIV_InputMode_RelVerify,
+                    TAG_DONE),
                 TAG_DONE),
             TAG_DONE),
         TAG_DONE);
 
-    if (!app)
+    if (!app) goto cleanup;
+
+    DoMethod(btnOpen, MUIM_Notify, MUIA_Selected, MUIV_EveryTime,
+        app, 2, MUIM_Application_ReturnID, MSG_OPEN_HTMLVIEW);
+
+    DoMethod(mainWin, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
+        app, 2, MUIM_Application_ReturnID, MSG_QUIT);
+
+    SetAttrs(mainWin, MUIA_Window_Open, TRUE, TAG_DONE);
+
+    BOOL running = TRUE;
+    while (running)
     {
-        LogMsg(fh, "FAILED to create Application!");
-        LogMsg(fh, "MUI could not find HTMLview.mcc in its class path.");
-        LogMsg(fh, "Make sure HTMLview.mcc is in MUI:Libs/mui/");
-        if (fh) Close(fh);
-        ShowError("LibLoad_Test: Failed!\nMUI cannot find HTMLview.mcc.\nMake sure it is in MUI:Libs/mui/");
-        result = 20;
-        goto cleanup_muimaster;
+        ULONG id = DoMethod(app, MUIM_Application_NewInput, &signals);
+
+        if (id == MSG_OPEN_HTMLVIEW && !htmlWin)
+        {
+            /* Create the MCC with only the hooks -- the image decoder needs
+               a screen, which is only known once the window is open. Setting
+               Contents at creation time queues image decode with no screen
+               and the decoded bitmaps end up unused. We mirror SimpleTest:
+               open the window first, THEN push Contents via SetAttrs. */
+            htmlObj = MUI_NewObject("HTMLview.mcc",
+                MUIA_HTMLview_ImageLoadHook, (ULONG)&loadHook,
+                MUIA_HTMLview_LoadHook,      (ULONG)&loadHook,
+                TAG_DONE);
+
+            if (htmlObj)
+            {
+                htmlWin = MUI_NewObject(MUIC_Window,
+                    MUIA_Window_Title,  (ULONG)"HTMLView Test Content",
+                    MUIA_Window_Width,  800,
+                    MUIA_Window_Height, 600,
+                    MUIA_Window_RootObject, MUI_NewObject(MUIC_Scrollgroup,
+                        MUIA_Scrollgroup_FreeVert,  TRUE,
+                        MUIA_Scrollgroup_FreeHoriz, TRUE,
+                        MUIA_Scrollgroup_Contents,  htmlObj,
+                        TAG_DONE),
+                    TAG_DONE);
+
+                if (htmlWin)
+                {
+                    DoMethod(htmlWin, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
+                        app, 2, MUIM_Application_ReturnID, MSG_QUIT);
+                    DoMethod(app, OM_ADDMEMBER, htmlWin);
+                    SetAttrs(htmlWin, MUIA_Window_Open, TRUE, TAG_DONE);
+
+                    ULONG open = 0;
+                    GetAttr(MUIA_Window_Open, htmlWin, &open);
+                    if (open)
+                        SetAttrs(htmlObj, MUIA_HTMLview_Contents, (ULONG)test_html, TAG_DONE);
+                }
+            }
+        }
+        else if (id == MSG_QUIT)
+        {
+            running = FALSE;
+        }
+
+        if (running && signals)
+        {
+            ULONG got = Wait(signals | SIGBREAKF_CTRL_C);
+            if (got & SIGBREAKF_CTRL_C) running = FALSE;
+        }
     }
 
-    LogMsg(fh, "Application created OK - MUI found HTMLview.mcc!");
+    if (htmlWin)  SetAttrs(htmlWin, MUIA_Window_Open, FALSE, TAG_DONE);
+    if (mainWin)  SetAttrs(mainWin, MUIA_Window_Open, FALSE, TAG_DONE);
 
-    SetAttrs(html, MUIA_HTMLview_Contents,
-        (ULONG)"<html><body><h1>LibLoad Test</h1><p>If you see this, HTMLview.mcc loads correctly!</p></body></html>",
-        TAG_DONE);
-
-    LogMsg(fh, "Opening window...");
-    SetAttrs(win, MUIA_Window_Open, TRUE, TAG_DONE);
-
-    ULONG open = 0;
-    GetAttr(MUIA_Window_Open, win, &open);
-    if (open)
-    {
-        LogMsg(fh, "TEST PASSED!");
-        if (fh) Close(fh);
-        ShowError("LibLoad_Test: TEST PASSED!\nHTMLview.mcc loaded successfully!");
-    }
-    else
-    {
-        LogMsg(fh, "Window failed to open");
-        if (fh) Close(fh);
-        ShowError("Window failed to open.");
-    }
-
-    Delay(50);
-    SetAttrs(win, MUIA_Window_Open, FALSE, TAG_DONE);
-
-cleanup_htmlview:
+cleanup:
     if (app) MUI_DisposeObject(app);
 
-cleanup_muimaster:
+#if defined(__amigaos4__)
+    if (MUIMasterBase)
+    {
+        if (IMUIMaster) DropInterface((struct Interface *)IMUIMaster);
+        CloseLibrary(MUIMasterBase);
+    }
+    if (IntuitionBase)
+    {
+        if (IIntuition) DropInterface((struct Interface *)IIntuition);
+        CloseLibrary(IntuitionBase);
+    }
+    if (SocketBase)
+    {
+        if (ISocket) DropInterface((struct Interface *)ISocket);
+        CloseLibrary(SocketBase);
+    }
+#else
     if (MUIMasterBase) CloseLibrary(MUIMasterBase);
-
-cleanup_intuition:
     if (IntuitionBase) CloseLibrary((struct Library *)IntuitionBase);
-    if (DOSBase) CloseLibrary((struct Library *)DOSBase);
+    if (SocketBase)    CloseLibrary(SocketBase);
+#endif
 
-    return result;
+    return 0;
 }
