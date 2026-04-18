@@ -2,7 +2,7 @@
 
  HTMLview.mcc - HTMLview MUI Custom Class
  Copyright (C) 1997-2000 Allan Odgaard
- Copyright (C) 2005-2010 by HTMLview.mcc Open Source Team
+ Copyright (C) 2005-2026 by HTMLview.mcc Open Source Team
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Lesser General Public
@@ -25,6 +25,7 @@ design provided by the following people:
 
 Alfonso Ranieri    <alforan@tin.it>
 Allan Odgaard      <duff2@users.sourceforge.net>
+Dimitris Panokostas <midwan@gmail.com>
 Dwight Meese       <ikepgh@suddenlink.net>
 Ilkka Lehtoranta   <ilkleht@isoveli.org>
 Jens Langner       <Jens.Langner@light-speed.de>

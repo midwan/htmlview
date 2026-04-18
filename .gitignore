@@ -4,3 +4,4 @@ bin_*
 mcp/locale.*
 MEMORY.md
 .DS_Store
+mcc/amissl_sdk/

@@ -165,6 +165,10 @@
   * to itself in a0, a pointer to a struct HTMLview_LoadMsg in a1 and a
   * pointer to the calling object in a2.
   *
+  * See MUIA_HTMLview_ImageLoadHook for a note on what the hook is
+  * responsible for and where to find a reference implementation that
+  * also covers HTTPS via AmiSSL.
+  *
   * This hook will be called from a separate task, so the only MUI method
   * that you can use is MUIM_Application_PushMethod. The hook may very well
   * be called by sevaral tasks at the same time, so your code needs to be
@@ -618,6 +622,13 @@
   * FUNCTION
   *
   * Setup a hook used for image-loading.
+  *
+  * Only the hook performs I/O; HTMLview.mcc itself never touches the
+  * network or the filesystem. The hook therefore decides which URL
+  * schemes are supported. The bundled SimpleTest / LibLoad_Test
+  * programs in mcc/ ship a reference hook that handles PROGDIR:,
+  * file://, http:// and (when compiled against the AmiSSL SDK)
+  * https:// with http->https redirect following.
   *
   * SEE ALSO
   *

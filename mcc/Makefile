@@ -152,6 +152,11 @@ endif
 LDFLAGS  = $(CPU) $(DEBUGSYM)
 LDLIBS   =
 
+# Per-program extras; populated by the AmiSSL block below.
+TEST_CFLAGS =
+TEST_LDLIBS =
+TEST_DEPS   =
+
 # different options per target OS
 ifeq ($(OS), os4)
 
@@ -240,6 +245,45 @@ endif
 endif
 endif
 endif
+
+###########################################################################
+# AmiSSL SDK — enables HTTPS in SimpleTest / LibLoad_Test.
+#
+# The SDK is downloaded from jens-maus/amissl on first build. Pass
+# USE_AMISSL=0 to disable; the test programs then speak plain HTTP only.
+# No SDK is distributed for MorphOS, so USE_AMISSL is forced off there.
+
+AMISSL_VERSION ?= 5.27
+AMISSL_SDK_DIR ?= amissl_sdk
+AMISSL_SDK_READY = $(AMISSL_SDK_DIR)/.ready
+AMISSL_INC = $(AMISSL_SDK_DIR)/AmiSSL/Developer/include
+AMISSL_URL = https://github.com/jens-maus/amissl/releases/download/$(AMISSL_VERSION)/AmiSSL-$(AMISSL_VERSION)-SDK.lha
+
+ifeq ($(OS), os3)
+  AMISSL_LIBDIR = $(AMISSL_SDK_DIR)/AmiSSL/Developer/lib/AmigaOS3
+  USE_AMISSL ?= 1
+else ifeq ($(OS), os4)
+  AMISSL_LIBDIR = $(AMISSL_SDK_DIR)/AmiSSL/Developer/lib/AmigaOS4/newlib
+  USE_AMISSL ?= 1
+else
+  USE_AMISSL = 0
+endif
+
+ifeq ($(USE_AMISSL), 1)
+  # Headers only: the inline macros in <inline/amissl.h> dispatch through
+  # a task-local library base, so no stub lib (libamisslstubs.a) is needed
+  # and there are no global AmiSSLBase / AmiSSLMasterBase symbols to
+  # satisfy at link time.
+  TEST_CFLAGS += -DHAVE_AMISSL -I$(AMISSL_INC)
+  TEST_DEPS   += $(AMISSL_SDK_READY)
+endif
+
+$(AMISSL_SDK_READY):
+	@echo "  GET   AmiSSL SDK $(AMISSL_VERSION)"
+	@mkdir -p $(AMISSL_SDK_DIR)
+	@cd $(AMISSL_SDK_DIR) && curl -fsSL -o sdk.lha "$(AMISSL_URL)"
+	@cd $(AMISSL_SDK_DIR) && lha xq sdk.lha && rm -f sdk.lha
+	@touch $@
 
 ###########################################################################
 # Here starts all stuff that is common for all target platforms and
@@ -447,6 +491,16 @@ $(OBJDIR)/mccclass_68k.o: ../include/mccclass_68k.c
 	@echo "  CC    $<"
 	@$(CC) $(CFLAGS) $< -o $@
 
+# Test programs get the AmiSSL include path (if enabled). The explicit
+# rules below shadow the generic %.o: %.c rule so TEST_CFLAGS applies.
+$(OBJDIR)/SimpleTest.o: SimpleTest.c test_image_hook.h $(TEST_DEPS)
+	@echo "  CC    $<"
+	@$(CC) $(CFLAGS) $(TEST_CFLAGS) $< -o $@
+
+$(OBJDIR)/LibLoad_Test.o: LibLoad_Test.c test_image_hook.h $(TEST_DEPS)
+	@echo "  CC    $<"
+	@$(CC) $(CFLAGS) $(TEST_CFLAGS) $< -o $@
+
 #
 
 # Link against all MCC objects EXCEPT library.o (globals conflict)
@@ -456,18 +510,18 @@ LIBOBJS = $(filter-out $(OBJDIR)/library.o $(OBJDIR)/crtclasses_begin.o $(OBJDIR
 $(SIMPLETARGET): $(OBJDIR)/SimpleTest.o
 	@echo "  LD    $@"
 ifneq (,$(DEBUG))
-	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/SimpleTest.o $(LDLIBS) -ldebug -Wl,-Map,$@.map
+	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/SimpleTest.o $(LDLIBS) $(TEST_LDLIBS) -ldebug -Wl,-Map,$@.map
 else
-	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/SimpleTest.o $(LDLIBS) -Wl,-Map,$@.map
+	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/SimpleTest.o $(LDLIBS) $(TEST_LDLIBS) -Wl,-Map,$@.map
 endif
 	@$(STRIP) --preserve-dates -R.comment -R.sdata2 -S -o $@ $@.debug
 
 $(LIBLOADTARGET): $(OBJDIR)/LibLoad_Test.o
 	@echo "  LD    $@"
 ifneq (,$(DEBUG))
-	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/LibLoad_Test.o $(LDLIBS) -ldebug -Wl,-Map,$@.map
+	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/LibLoad_Test.o $(LDLIBS) $(TEST_LDLIBS) -ldebug -Wl,-Map,$@.map
 else
-	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/LibLoad_Test.o $(LDLIBS) -Wl,-Map,$@.map
+	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/LibLoad_Test.o $(LDLIBS) $(TEST_LDLIBS) -Wl,-Map,$@.map
 endif
 	@$(STRIP) --preserve-dates -R.comment -R.sdata2 -S -o $@ $@.debug
 
