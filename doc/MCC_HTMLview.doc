@@ -141,6 +141,14 @@ ToDo:
     FUNCTION
         Setup a hook used for image-loading.
 
+        Only the hook performs I/O; HTMLview.mcc itself never
+        touches the network or the filesystem. The hook therefore
+        decides which URL schemes are supported. The bundled
+        SimpleTest / LibLoad_Test programs in mcc/ ship a reference
+        hook that handles PROGDIR:, file://, http:// and (when
+        compiled against the AmiSSL SDK) https:// with http->https
+        redirect following.
+
     SEE ALSO
         MUIA_HTMLview_LoadHook
 
@@ -159,6 +167,10 @@ ToDo:
 
     FUNCTION
         Setup a hook used for (page)-loading.
+
+        See MUIA_HTMLview_ImageLoadHook for a note on what the
+        hook is responsible for and where to find a reference
+        implementation that also covers HTTPS via AmiSSL.
 
         The hook is called with a pointer to itself in a0, a pointer to a
         struct HTMLview_LoadMsg in a1 and a pointer to the calling object in

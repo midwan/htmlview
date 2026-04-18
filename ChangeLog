@@ -5,6 +5,36 @@ MUI HTMLview MCC class - ChangeLog
 $Id$
 $URL$
 
+2026-04-18  Dimitris Panokostas <midwan@gmail.com>
+
+  * mcc/test_image_hook.h: HTTPS support via AmiSSL. The shared test-program
+    image hook now handles https:// URLs and follows http->https redirects
+    (up to five hops). TLS is wrapped through amisslmaster.library +
+    amissl.library (jens-maus AmiSSL 5.27 SDK), using the inline macros
+    against task-local library bases -- no stub lib link and no global
+    AmiSSLBase symbol required. Certificate verification is currently
+    VERIFY_NONE; CA bundle wiring is a follow-up.
+  * mcc/test_image_hook.h: Replaced unbounded sprintf into log buffers with
+    snprintf; a long Location: header or redirect target could otherwise
+    overflow the stack log buffer.
+  * mcc/Makefile: On-demand AmiSSL SDK download (lha xq). HTTPS is enabled
+    for OS3 and OS4 builds; MorphOS stays on plain HTTP.
+  * mcc/SimpleTest.c, mcc/LibLoad_Test.c: Added network-image test entries
+    (plain HTTP from aminet, http->https redirect on amigaworld, direct
+    HTTPS from aminet).
+  * mcc/LibLoad_Test.c: New test program that exercises the same hook as
+    SimpleTest but through dlopen-style library loading, making it easier
+    to verify the shipped HTMLview.mcc on each platform.
+
+2026-04-17  Dimitris Panokostas <midwan@gmail.com>
+
+  * mcc: Fix MorphOS MCP and OS4 MCC build issues; OS4 build now makes
+    -ldebug conditional and stubs kprintf when not building with DEBUG=1;
+    enabled all three platform builds (OS3, OS4, MorphOS) in CI.
+  * mcc/ImageManager.cpp, mcc/IM_Render.cpp, mcc/Dispatcher.cpp: Local
+    image rendering fixes uncovered by the new test programs (decoder
+    handshake, frame cleanup, hook dispatcher wiring on OS4).
+
 2016-07-29  Thore Böckelmann <tboeckel@gmx.de>
 
   * mcc: lots of changes to get this beast buildable with our Linux based cross
