@@ -102,6 +102,11 @@ RenderEngine::RenderEngine (struct Screen *scr, struct DecoderData *data)
   TmpRP.Layer = NULL;
   TmpRP.BitMap = NULL;
   InitRastPort(&BMpRP);
+  /* AllocateFrame() uses `first = FirstFrame ? FALSE : TRUE` to detect the
+     initial frame and then calls StatusItem->Start(). The LastFrame self-ref
+     trick only works if FirstFrame starts as NULL — stack-allocated
+     RenderEngine instances would otherwise see garbage here. */
+  FirstFrame = NULL;
   LastFrame = (struct PictureFrame *)&FirstFrame;
 }
 
@@ -171,7 +176,7 @@ BOOL RenderEngine::AllocateFrame (ULONG width, ULONG height, ULONG animdelay, UL
           goto error;
       }
 
-      if(first)
+      if(first && Data->StatusItem)
         Data->StatusItem->Start(FirstFrame);
 
       LastFrame = LastFrame->Next;

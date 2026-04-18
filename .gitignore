@@ -2,3 +2,5 @@
 bin_*
 .obj_*
 mcp/locale.*
+MEMORY.md
+.DS_Store

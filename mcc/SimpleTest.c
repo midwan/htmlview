@@ -1,54 +1,184 @@
 
 #include <proto/exec.h>
 #include <proto/intuition.h>
+#include <proto/dos.h>
 #include <proto/muimaster.h>
 #include <clib/alib_protos.h>
 #include <libraries/mui.h>
+#include <utility/tagitem.h>
 #include <stdio.h>
 
-#if defined(__amigaos4__)
-#define kprintf(...) ((void)0)
-#else
-extern void kprintf(const char *fmt, ...);
+#if defined(__MORPHOS__)
+#include <net/socketbasetags.h>
+#elif defined(__amigaos4__)
+#include <bsdsocket/socketbasetags.h>
 #endif
 
-struct Library *MUIMasterBase;
 #if defined(__amigaos4__)
-struct Library *IntuitionBase;
+struct Library          *IntuitionBase;
+struct Library          *MUIMasterBase;
+struct Interface        *IntuitionIFace;
+struct MUIMasterIFace   *IMUIMaster;
+struct Library          *SocketBase;
+struct SocketIFace      *ISocket;
 #else
-struct IntuitionBase *IntuitionBase;
+struct Library          *MUIMasterBase;
+struct IntuitionBase    *IntuitionBase;
+struct Library          *SocketBase;
 #endif
 struct Library *UtilityBase;
 
-// Simple MUI macros if missing
-#ifndef MUI_Set
-#define MUI_Set(o,a,v) SetAttrs(o,a,v,TAG_DONE)
+#if defined(DEBUG)
+extern void kprintf(const char *fmt, ...);
+#else
+static void kprintf(const char *fmt, ...) { (void)fmt; }
 #endif
-#ifndef MUI_GetVal
-#define MUI_GetVal(o,a) ({ ULONG v; GetAttr(a,o,&v); v; })
-#endif
+
+#include "test_image_hook.h"
+
+static struct Hook ImageLoadHook;
+
+/* Keep this HTML blob self-contained; PROGDIR:test.png is copied into the
+   binary directory by the Makefile, and the HTTP entries exercise the
+   bsdsocket/chunked path in the shared hook. */
+static const char *test_html =
+    "<html><body>"
+    "<h1>HTMLView MCC Test Suite</h1>"
+    "<p>This is a comprehensive test demonstrating HTMLview features.</p>"
+
+    "<h2>Images - Local Files</h2>"
+    "<p>Local image (PROGDIR:test.png):</p>"
+    "<p><img src=\"PROGDIR:test.png\" alt=\"Local test image\"></p>"
+    "<p>Same image sized to 64x64:</p>"
+    "<p><img src=\"PROGDIR:test.png\" alt=\"Sized image\" width=\"64\" height=\"64\"></p>"
+    "<p>Centered with border:</p>"
+    "<p align=\"center\"><img src=\"PROGDIR:test.png\" alt=\"Centered\" width=\"96\" height=\"96\" border=\"2\"></p>"
+
+    "<h2>Images - Network (HTTP)</h2>"
+    "<p>These need bsdsocket.library and a working network stack:</p>"
+    "<p><img src=\"http://aminet.net/pics/aminet.png\" alt=\"Aminet Logo (HTTP)\"></p>"
+    "<p><img src=\"http://www.amigaworld.net/images/awn2.gif\" alt=\"AmigaWorld (HTTP)\"></p>"
+
+    "<h2>Text Formatting</h2>"
+    "<p><b>Bold text</b>, <i>italic text</i>, "
+    "<u>underlined text</u>, <s>strikethrough text</s>, "
+    "<tt>monospace text</tt></p>"
+    "<p>Combination: <b><i><u>Bold Italic Underlined</u></i></b></p>"
+
+    "<h2>Links</h2>"
+    "<p>Visit <a href=\"http://aminet.net\">Aminet</a> or "
+    "<a href=\"http://os4depot.net\">OS4Depot</a>.</p>"
+    "<p>Links can have <b>bold</b> text inside <a href=\"#\">like this</a>.</p>"
+
+    "<h2>Headings</h2>"
+    "<h1>H1</h1><h2>H2</h2><h3>H3</h3>"
+    "<h4>H4</h4><h5>H5</h5><h6>H6</h6>"
+
+    "<h2>Lists</h2>"
+    "<ul><li>First</li><li>Second</li><li>Third with <b>bold</b></li></ul>"
+    "<ol><li>Step one</li><li>Step two</li><li>Step three</li></ol>"
+    "<dl>"
+    "<dt>HTML</dt><dd>HyperText Markup Language</dd>"
+    "<dt>CSS</dt><dd>Cascading Style Sheets</dd>"
+    "</dl>"
+
+    "<h2>Tables</h2>"
+    "<table border=\"1\" width=\"100%\">"
+    "<tr><th>Column 1</th><th>Column 2</th><th>Column 3</th></tr>"
+    "<tr><td>Row 1</td><td>Cell 2</td><td>Cell 3</td></tr>"
+    "<tr><td>Row 2</td><td><b>bold</b></td><td><a href=\"#\">link</a></td></tr>"
+    "</table>"
+
+    "<h2>Forms</h2>"
+    "<form action=\"submit\">"
+    "<p>Text: <input type=\"text\" name=\"t\" value=\"Sample\"></p>"
+    "<p>Pass: <input type=\"password\" name=\"p\"></p>"
+    "<p><input type=\"checkbox\" checked> Option A "
+    "<input type=\"checkbox\"> Option B</p>"
+    "<p><input type=\"radio\" name=\"r\" checked> Yes "
+    "<input type=\"radio\" name=\"r\"> No</p>"
+    "<select><option>One</option><option selected>Two</option></select>"
+    "<textarea rows=\"3\" cols=\"40\">Default text.</textarea>"
+    "<p><input type=\"submit\" value=\"Submit\"> "
+    "<input type=\"reset\" value=\"Reset\"></p>"
+    "</form>"
+
+    "<h2>Preformatted</h2>"
+    "<p>Inline: <code>printf(\"hi\");</code></p>"
+    "<pre>function example() {\n    return 42;\n}</pre>"
+    "<hr><p>Line 1<br>Line 2<br>Line 3</p>"
+
+    "<h2>Font Styles</h2>"
+    "<p><big>Big</big>, <small>small</small>, "
+    "<strong>strong</strong>, <em>em</em></p>"
+    "<p><font color=\"red\">Red</font>, "
+    "<font color=\"green\">Green</font>, "
+    "<font color=\"blue\">Blue</font></p>"
+
+    "<h2>Entities</h2>"
+    "<p>&copy; &reg; &trade; &lt; &gt; &amp; &larr; &rarr;</p>"
+
+    "<p align=\"center\"><b>End of Test Suite</b></p>"
+    "</body></html>";
 
 int main(void)
 {
     Object *app, *win, *html;
 
+#if defined(__amigaos4__)
+    IntuitionBase = OpenLibrary("intuition.library", 39);
+    if (IntuitionBase)
+        IntuitionIFace = GetInterface(IntuitionBase, "main", 1, NULL);
+    MUIMasterBase = OpenLibrary("muimaster.library", 19);
+    if (MUIMasterBase)
+        IMUIMaster = (struct MUIMasterIFace *)GetInterface(MUIMasterBase, "main", 1, NULL);
+    if (!IntuitionBase || !MUIMasterBase || !IntuitionIFace || !IMUIMaster)
+#else
     IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 39);
     MUIMasterBase = OpenLibrary("muimaster.library", 19);
-
     if (!IntuitionBase || !MUIMasterBase)
+#endif
     {
         kprintf("SimpleTest: Failed to open libraries\n");
         return 20;
     }
 
+    SocketBase = OpenLibrary("bsdsocket.library", 4);
+#if defined(__amigaos4__)
+    if (SocketBase)
+        ISocket = (struct SocketIFace *)GetInterface(SocketBase, "main", 1, NULL);
+#endif
+
+    /* CallHookPkt on m68k and MorphOS passes args in registers (a0=hook,
+       a2=obj, a1=msg); our plain-C TestImageHookFunc expects stack args.
+       HookEntry is the amiga.lib trampoline that does the register->stack
+       conversion. On OS4 hooks are already called with stack args, and
+       HookEntry is not declared, so we assign directly. */
+#if defined(__amigaos4__)
+    ImageLoadHook.h_Entry    = (HOOKFUNC)TestImageHookFunc;
+    ImageLoadHook.h_SubEntry = NULL;
+#else
+    ImageLoadHook.h_Entry    = (HOOKFUNC)HookEntry;
+    ImageLoadHook.h_SubEntry = (HOOKFUNC)TestImageHookFunc;
+#endif
+    ImageLoadHook.h_Data     = NULL;
+
     app = MUI_NewObject(MUIC_Application,
         MUIA_Application_Title      , "HTMLView Simple Test",
-        MUIA_Application_Version    , "$VER: SimpleTest 1.0 (15.12.2025)",
+        MUIA_Application_Version    , (ULONG)"$VER: SimpleTest 1.2 (18.4.2026)",
         MUIA_Application_SingleTask , TRUE,
         MUIA_Application_Window     , win = MUI_NewObject(MUIC_Window,
-            MUIA_Window_Title, "HTMLView Test Window",
-            MUIA_Window_RootObject, html = MUI_NewObject("HTMLview.mcc",
-                MUIA_Background, MUII_TextBack,
+            MUIA_Window_Title,  (ULONG)"HTMLView Test Window",
+            MUIA_Window_Width,  640,
+            MUIA_Window_Height, 480,
+            MUIA_Window_RootObject, MUI_NewObject(MUIC_Scrollgroup,
+                MUIA_Scrollgroup_FreeVert,  TRUE,
+                MUIA_Scrollgroup_FreeHoriz, TRUE,
+                MUIA_Scrollgroup_Contents,  html = MUI_NewObject("HTMLview.mcc",
+                    MUIA_Background,               MUII_TextBack,
+                    MUIA_HTMLview_ImageLoadHook,   (ULONG)&ImageLoadHook,
+                    MUIA_HTMLview_LoadHook,        (ULONG)&ImageLoadHook,
+                    TAG_DONE),
                 TAG_DONE),
             TAG_DONE),
         TAG_DONE);
@@ -60,42 +190,27 @@ int main(void)
     else
     {
         SetAttrs(win, MUIA_Window_Open, TRUE, TAG_DONE);
-        
-        static const char *test_html = 
-            "<html><body>"
-            "<h1>HTMLView Test</h1>"
-            "<p>This is a <b>bold</b> paragraph.</p>"
-            "<p>This is an <i>italic</i> paragraph.</p>"
-            "<p>This is a <a href=\"http://google.com\">link</a>.</p>"
-            "</body></html>";
 
-        // Correct ID for HTMLview contents
-        #define MUIA_HTMLview_Contents 0xad003005
-        SetAttrs(html, MUIA_HTMLview_Contents, test_html, TAG_DONE);
+        SetAttrs(html, MUIA_HTMLview_Contents, (ULONG)test_html, TAG_DONE);
 
-        ULONG val = 0;
-        GetAttr(MUIA_Window_Open, win, &val);
-        if (val)
+        ULONG open = 0;
+        GetAttr(MUIA_Window_Open, win, &open);
+        if (open)
         {
+             DoMethod(win, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
+                      app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
+
              ULONG sigs = 0;
              BOOL running = TRUE;
-             
-             DoMethod(win, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, 
-                      app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
-             
-             while(running)
+             while (running)
              {
                  ULONG id = DoMethod(app, MUIM_Application_NewInput, &sigs);
-                 
-                 if (id == MUIV_Application_ReturnID_Quit) {
-                     running = FALSE;
-                 }
-                 
-                 if (running && sigs) {
+                 if (id == MUIV_Application_ReturnID_Quit) running = FALSE;
+
+                 if (running && sigs)
+                 {
                     ULONG got = Wait(sigs | SIGBREAKF_CTRL_C);
-                    if (got & SIGBREAKF_CTRL_C) {
-                        running = FALSE;
-                    }
+                    if (got & SIGBREAKF_CTRL_C) running = FALSE;
                  }
              }
         }
@@ -103,12 +218,33 @@ int main(void)
         {
              kprintf("SimpleTest: Window failed to open.\n");
         }
-        
+
         MUI_DisposeObject(app);
     }
-    
-    if (MUIMasterBase) CloseLibrary(MUIMasterBase);
-    if (IntuitionBase) CloseLibrary((struct Library *)IntuitionBase);
-    
+
+    if (SocketBase)
+    {
+#if defined(__amigaos4__)
+        if (ISocket) DropInterface((struct Interface *)ISocket);
+#endif
+        CloseLibrary(SocketBase);
+    }
+    if (MUIMasterBase)
+    {
+#if defined(__amigaos4__)
+        if (IMUIMaster) DropInterface((struct Interface *)IMUIMaster);
+#endif
+        CloseLibrary(MUIMasterBase);
+    }
+    if (IntuitionBase)
+    {
+#if defined(__amigaos4__)
+        if (IntuitionIFace) DropInterface(IntuitionIFace);
+        CloseLibrary(IntuitionBase);
+#else
+        CloseLibrary((struct Library *)IntuitionBase);
+#endif
+    }
+
     return 0;
 }

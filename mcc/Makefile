@@ -171,7 +171,7 @@ ifeq ($(OS), os4)
   CFLAGS   += -mcrt=$(CRT) -D__USE_INLINE__ -D__NEW_TIMEVAL_DEFINITION_USED__ \
               -D__USE_CLASSIC_MINTERM__ -Wa,-mregnames -DNO_PPCINLINE_STDARG \
               -fno-exceptions -fno-threadsafe-statics
-  LDFLAGS  += -mcrt=$(CRT) -nostartfiles
+  LDFLAGS  += -mcrt=$(CRT) -nostartfiles -Wl,-u,_startu
   LDLIBS   += -lauto
 
   # additional object files required
@@ -420,7 +420,7 @@ CATALOGS = $(LOCALE)/deutsch.catalog
 #
 
 # Build test programs for all platforms
-all: $(BINDIR) $(OBJDIR) $(MCCTARGET) $(SIMPLETARGET) $(LIBLOADTARGET)
+all: $(BINDIR) $(OBJDIR) $(MCCTARGET) $(SIMPLETARGET) $(LIBLOADTARGET) $(BINDIR)/test.png
 
 # make the object directories
 $(OBJDIR):
@@ -476,6 +476,11 @@ $(MCCTARGET) : $(MCCOBJS)
 	@echo "  LD    $@"
 	@$(CXX) $(LDFLAGS) -o $@.debug $(MCCOBJS) $(LDLIBS) -Wl,-Map,$@.map
 	@$(STRIP) --preserve-dates -R.comment -R.sdata2 -S -o $@ $@.debug
+
+# Copy the sample PNG used by the two test programs into the binary dir.
+$(BINDIR)/test.png: testdata/test.png | $(BINDIR)
+	@echo "  CP    $@"
+	@cp testdata/test.png $@
 
 $(OBJDIR)/library.o: library.c ../include/mccinit.c \
   HTMLview_mcc.h private.h rev.h

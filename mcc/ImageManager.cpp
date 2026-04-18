@@ -21,54 +21,85 @@
 ***************************************************************************/
 
 #include <string.h>
-#include <dos/dostags.h>
-#include <proto/cybergraphics.h>
-#include <proto/dos.h>
+#include <ctype.h>
+#include <stdio.h>
+
 #include <proto/exec.h>
 #include <proto/graphics.h>
 #include <proto/intuition.h>
+#include <proto/cybergraphics.h>
+#include <proto/dos.h>
+#include <dos/dostags.h>
 #include <proto/utility.h>
+
 #include <clib/macros.h>
 
-#if defined(__amigaos4__)
-#include <exec/emulation.h>
-#elif defined(__MORPHOS__)
-#include <emul/emulinterface.h>
-#endif
+#include "mcc_common.h"
 
-#include "ImageManager.h"
+#include "IM_Render.h"
 #include "IM_Output.h"
 #include "ImageDecoder.h"
 #include "Animation.h"
 #include "SharedData.h"
 
+#include <proto/datatypes.h>
+#include <datatypes/datatypes.h>
+#include <datatypes/pictureclass.h>
+#include <datatypes/datatypesclass.h>
+#include <intuition/gadgetclass.h>
+
+#ifndef PMODE_V43
+#define PMODE_V43 1
+#endif
+#ifndef MODE_V43
+#define MODE_V43 PMODE_V43
+#endif
+#ifndef PDTA_MaskPlane
+#define PDTA_MaskPlane (DTA_Dummy + 258)
+#endif
+#ifndef PDTA_Mask
+#define PDTA_Mask PDTA_MaskPlane
+#endif
+
 #include "classes/HostClass.h"
 #include "classes/ImgClass.h"
 #include "classes/SuperClass.h"
 
-//#include "private.h"
-
-#include "SDI_stdarg.h"
 #include <stdio.h>
 #include <new>
 #include "private.h"
 
-#ifdef __amigaos4__
-#define GetImageDecoderClass(base) ( (struct IClass *)(IExec->EmulateTags)(base, ET_Offset, -30, ET_RegisterA6, base, ET_SaveRegs, TRUE, TAG_DONE) )
+#if defined(__amigaos4__)
+/* On OS4 DeleteFile is deprecated, use Delete instead.
+   The SDK will then map Delete to IDOS->Delete. */
+#define DeleteFile Delete
+#endif
+
+#if defined(__amigaos3__)
+#define GetImageDecoderClass(base) (struct IClass *)DoMethod(base, ET_Offset, -30, ET_RegisterA6, base, ET_SaveRegs, TRUE, TAG_DONE)
 #elif defined(__MORPHOS__)
 #define GetImageDecoderClass(base) (struct IClass *)({ REG_A6 = (ULONG) (base); MyEmulHandle->EmulCallDirectOS(-30); })
 #elif defined(__cplusplus)
-#warning FIXME
 #define GetImageDecoderClass(base) NULL
 #else
-#define GetImageDecoderClass(base) ( (struct IClass *(*)(REG(a6, struct Library *))) ((UBYTE *)base-30) )(base)
+#define GetImageDecoderClass(base) ( (struct IClass *(*)(REG(a6, struct Library *))) ((base)->lp_VTable[-5]) ) (base)
 #endif
 
-struct DecoderThreadStartupMessage
+extern struct Library *CyberGfxBase;
+extern struct Library *DataTypesBase;
+
+#if defined(__amigaos4__)
+extern struct DataTypesIFace *IDataTypes;
+extern struct DOSIFace *IDOS;
+#endif
+
+struct SignalSemaphore ImageMutex;
+
+CONSTRUCTOR(MutexInit, 5)
 {
-	struct Message message;
-	struct Args *args;
-};
+  memset(&ImageMutex, 0, sizeof(ImageMutex));
+  InitSemaphore(&ImageMutex);
+}
 
 ImageCacheItem::ImageCacheItem (STRPTR url, struct PictureFrame *pic)
 {
@@ -100,6 +131,7 @@ ImageCache::~ImageCache ()
 
 VOID ImageCache::AddImage (STRPTR url, struct PictureFrame *pic)
 {
+  ObtainSemaphore(&ImageMutex);
   struct ImageCacheItem *item = new (std::nothrow) struct ImageCacheItem (url, pic);
   if (item)
   {
@@ -129,48 +161,49 @@ VOID ImageCache::AddImage (STRPTR url, struct PictureFrame *pic)
         preprev = prev;
       }
     }
-    if(preprev && !preprev->Next)
-      LastEntry = preprev;
   }
+  ReleaseSemaphore(&ImageMutex);
 }
 
 struct PictureFrame *ImageCache::FindImage (STRPTR url, ULONG width, ULONG height)
 {
-  struct ImageCacheItem *prev, *first = FirstEntry;
+  ObtainSemaphore(&ImageMutex);
+  struct ImageCacheItem *preprev = NULL, *prev, *first = FirstEntry;
   while(first)
   {
-    if(!strcmp(first->URL, url) && first->Picture->MatchSize(width, height))
-    {
-      if(first != LastEntry)
-      {
-        if(first == FirstEntry)
-            FirstEntry = first->Next;
-        else  prev->Next = first->Next;
-        LastEntry = (LastEntry->Next = first);
-        first->Next = NULL;
-      }
-      return(first->Picture);
-    }
     prev = first;
     first = first->Next;
+
+    if(!strcmp(url, prev->URL) && prev->Picture->MatchSize(width, height))
+    {
+      if(prev != LastEntry)
+      {
+        if(prev == FirstEntry)
+            FirstEntry = first;
+        else  preprev->Next = first;
+
+        LastEntry = (LastEntry->Next = prev);
+        prev->Next = NULL;
+      }
+      ReleaseSemaphore(&ImageMutex);
+      return(prev->Picture);
+    }
+    preprev = prev;
   }
+  ReleaseSemaphore(&ImageMutex);
   return(NULL);
 }
 
-inline BOOL Match (STRPTR url, struct ImageCacheItem *item)
+static BOOL Match (STRPTR url, struct ImageCacheItem *item)
 {
   BOOL res;
-  switch((LONG)url)
+  switch((ULONG)url)
   {
-    case MUIV_HTMLview_FlushImage_All:
+    case (ULONG)MUIV_HTMLview_FlushImage_All:
       res = TRUE;
     break;
 
-    case MUIV_HTMLview_FlushImage_Displayed:
-      res = item->Picture->LockCnt > 1;
-    break;
-
-    case MUIV_HTMLview_FlushImage_Nondisplayed:
+    case (ULONG)MUIV_HTMLview_FlushImage_Displayed:
       res = item->Picture->LockCnt == 1;
     break;
 
@@ -183,6 +216,7 @@ inline BOOL Match (STRPTR url, struct ImageCacheItem *item)
 
 VOID ImageCache::FlushCache (STRPTR url)
 {
+  ObtainSemaphore(&ImageMutex);
   struct ImageCacheItem *prev, *preprev = NULL, *first = FirstEntry;
   while(first)
   {
@@ -209,6 +243,7 @@ VOID ImageCache::FlushCache (STRPTR url)
 
   if(!(LastEntry = preprev))
     LastEntry = (struct ImageCacheItem *)&FirstEntry;
+  ReleaseSemaphore(&ImageMutex);
 }
 
 DecodeItem::DecodeItem (Object *obj, struct HTMLviewData *data, struct ImageList *image)
@@ -339,20 +374,8 @@ BOOL DecodeItem::Update ()
   return(result);
 }
 
-/* This function is redundant, but keept for debugging purposes */
 DecodeQueueManager::~DecodeQueueManager ()
 {
-/*  struct DecodeItem *prev, *first = Queue;
-  while(first)
-  {
-    prev = first;
-    first = first->Next;
-
-    D(DBF_ALWAYS, "Status: %ld, Y: %ld, Pass: %ld, Started: %ld",
-      prev->Status, prev->CurrentY, prev->CurrentPass, prev->Started);
-
-    delete prev;
-  }*/
 }
 VOID DecodeQueueManager::InsertElm (struct DecodeItem *item)
 {
@@ -389,7 +412,6 @@ ULONG DecodeQueueManager::DumpQueue ()
   ULONG total = 0;
   ObtainSemaphore(&Mutex);
   struct DecodeItem *prev, *first = Queue;
-//BOOL result = first ? TRUE : FALSE;
   while(first)
   {
     prev = first;
@@ -397,7 +419,6 @@ ULONG DecodeQueueManager::DumpQueue ()
     if(prev->Update())
     {
       total++;
-    //result = FALSE;
     }
   }
   ReleaseSemaphore(&Mutex);
@@ -423,263 +444,6 @@ VOID DecodeQueueManager::InvalidateQueue (Object *obj)
   ReleaseSemaphore(&Mutex);
 }
 
-CPPDISPATCHER(DecoderDispatcher)
-{
-  ULONG result = 0;
-  struct DecoderData *data;
-
-	//return 0;
-  if (msg->MethodID!=OM_NEW)
-		data = (struct DecoderData *)INST_DATA(cl, obj);
-
-  switch(msg->MethodID)
-  {
-    case OM_NEW:
-    {
-      if((obj = (Object *)DoSuperMethodA(cl, obj, (Msg)msg)))
-      {
-        struct DecoderData *data = (struct DecoderData *)INST_DATA(cl, obj);
-        struct opSet *nmsg = (struct opSet *)msg;
-        BOOL no_dither = FALSE;
-        ULONG width = 0, height = 0;
-
-        struct TagItem *tag, *tags = nmsg->ops_AttrList;
-        while((tag = NextTagItem(&tags)))
-        {
-          LONG ti_Data = tag->ti_Data;
-          switch(tag->ti_Tag)
-          {
-            case IDA_Screen:
-              data->Scr = (struct Screen *)ti_Data;
-            break;
-
-            case IDA_NoDither:
-              no_dither = ti_Data;
-            break;
-
-            case IDA_Width:
-              width = ti_Data;
-            break;
-
-            case IDA_Height:
-              height = ti_Data;
-            break;
-
-            case IDA_HTMLview:
-              data->HTMLview = (Object *)ti_Data;
-            break;
-
-            case IDA_LoadHook:
-              data->LoadHook = (struct Hook *)ti_Data;
-            break;
-
-            case IDA_LoadMsg:
-              data->LoadMsg = (struct HTMLview_LoadMsg *)ti_Data;
-            break;
-
-            case IDA_StatusStruct:
-              data->StatusItem = (struct DecodeItem *)ti_Data;
-            break;
-
-            case IDA_StartBuffer:
-              data->StartBuffer = (UBYTE *)ti_Data;
-            break;
-
-            case IDA_BytesInBuffer:
-              data->BytesInBuffer = ti_Data;
-            break;
-
-            case IDA_Gamma:
-              data->Gamma = ti_Data;
-            break;
-          }
-        }
-
-        struct Screen *scr;
-        if((scr = data->Scr))
-        {
-          ULONG depth = GetBitMapAttr(scr->RastPort.BitMap, BMA_DEPTH);
-
-          if(!CyberGfxBase && depth > 8)
-            depth = 8;
-
-          class ScaleEngine *img;
-          if(depth >= 15)
-              img = new (std::nothrow) TrueColourEngine(scr, width, height, data);
-          else if(no_dither)
-              img = new (std::nothrow) LowColourNDEngine(scr, width, height, data);
-          else  img = new (std::nothrow) LowColourEngine(scr, width, height, data);
-
-          if((data->ImgObj = img))
-            return((ULONG)obj);
-        }
-
-        CoerceMethod(cl, obj, OM_DISPOSE);
-      }
-    }
-    break;
-
-    case IDM_Decode:
-    {
-      if((result = DoSuperMethodA(cl, obj, (Msg)msg)))
-        data->ImgObj->FlushBuffers();
-    }
-    break;
-
-    case OM_DISPOSE:
-    {
-      delete data->ImgObj;
-      result = DoSuperMethodA(cl, obj, (Msg)msg);
-    }
-    break;
-
-    case OM_GET:
-    {
-      struct opGet *gmsg = (struct opGet *)msg;
-
-      switch(gmsg->opg_AttrID)
-      {
-        case IDA_Gamma:
-        {
-          if(data->Gamma)
-          {
-            *gmsg->opg_Storage = data->Gamma;
-            result = TRUE;
-          }
-        }
-        break;
-
-        default:
-          result = DoSuperMethodA(cl, obj, (Msg)msg);
-        break;
-      }
-    }
-    break;
-
-    case IDM_Read:
-    {
-      struct IDP_Read *rmsg = (struct IDP_Read *)msg;
-
-      ULONG len = rmsg->Length;
-      STRPTR buf = (STRPTR)rmsg->Buffer;
-      if(data->BytesInBuffer)
-      {
-        result = MIN(len, data->BytesInBuffer);
-        memcpy(buf, data->StartBuffer, result);
-        buf += result;
-        len -= result;
-        data->StartBuffer += result;
-        data->BytesInBuffer -= result;
-      }
-
-      data->LoadMsg->lm_Params.lm_Read.Buffer = buf;
-      data->LoadMsg->lm_Params.lm_Read.Size = len;
-      result += CallHookPkt(data->LoadHook, data->HTMLview, data->LoadMsg);
-    }
-    break;
-
-    case IDM_Skip:
-    {
-      struct IDP_Skip *smsg = (struct IDP_Skip *)msg;
-      UBYTE skip[512];
-      LONG left = smsg->Length;
-
-      if(data->BytesInBuffer)
-      {
-        LONG size = MIN((LONG)data->BytesInBuffer, left);
-        left -= size;
-        data->BytesInBuffer -= size;
-      }
-
-      while(left > 0)
-      {
-        data->LoadMsg->lm_Params.lm_Read.Buffer = (STRPTR)skip;
-        data->LoadMsg->lm_Params.lm_Read.Size = left > 512 ? 512 : left;
-        LONG sub = CallHookPkt(data->LoadHook, data->HTMLview, data->LoadMsg);
-        if(!sub)
-          break;
-        left -= sub;
-      }
-    }
-    break;
-
-    case IDM_AllocateFrameTags:
-    {
-      struct IDP_AllocateFrameTags *smsg = (struct IDP_AllocateFrameTags *)msg;
-      ULONG Interlaced = InterlaceNONE, AnimDelay = 0, Disposal = DisposeNOP, LeftOfs = 0, TopOfs = 0, Transparency = TransparencyNONE;
-      struct RGBPixel *Background = NULL;
-
-      struct TagItem *tag, *tags = &smsg->Tags;
-      while((tag = NextTagItem(&tags)))
-      {
-        LONG ti_Data = tag->ti_Data;
-        switch(tag->ti_Tag)
-        {
-          case AFA_Interlaced:
-            Interlaced = ti_Data;
-          break;
-
-          case AFA_Transparency:
-            Transparency = ti_Data;
-          break;
-
-          case AFA_LeftOfs:
-            LeftOfs = ti_Data;
-          break;
-
-          case AFA_TopOfs:
-            TopOfs = ti_Data;
-          break;
-
-          case AFA_AnimDelay:
-            AnimDelay = ti_Data;
-          break;
-
-          case AFA_Disposal:
-            Disposal = ti_Data;
-          break;
-
-          case AFA_Background:
-            Background = (struct RGBPixel *)&ti_Data;
-          break;
-        }
-      }
-
-      result = data->ImgObj->SetDimensions(smsg->Width, smsg->Height, Interlaced, AnimDelay, Disposal, LeftOfs, TopOfs, Background, Transparency);
-    }
-    break;
-
-    case IDM_SetDimensions:
-    {
-      struct IDP_SetDimensions *smsg = (struct IDP_SetDimensions *)msg;
-      result = data->ImgObj->SetDimensions(smsg->Width, smsg->Height, smsg->Interlaced, smsg->AnimDelay, smsg->Disposal, smsg->LeftOfs, smsg->TopOfs, &smsg->Background, TransparencyNONE);
-    }
-    break;
-
-    case IDM_GetLineBuffer:
-    {
-      struct IDP_GetLineBuffer *gmsg = (struct IDP_GetLineBuffer *)msg;
-      result = (ULONG)data->ImgObj->GetLineBuffer(gmsg->Y, gmsg->LastPass);
-    }
-    break;
-
-    case IDM_DrawLineBuffer:
-    {
-      struct IDP_DrawLineBuffer *dmsg = (struct IDP_DrawLineBuffer *)msg;
-      data->ImgObj->DrawLineBuffer(dmsg->LineBuffer, dmsg->Y, dmsg->Height);
-      result = data->StatusItem->Abort;
-    }
-    break;
-
-    default:
-    {
-      result = DoSuperMethodA(cl, obj, (Msg)msg);
-    }
-    break;
-  }
-  return(result);
-}
-
 struct Args
 {
   Args (Object *obj, struct HTMLviewData *data, struct ImageList *image, struct Screen *scr, LONG sigbit, struct Task *parenttask)
@@ -692,11 +456,13 @@ struct Args
     }
 
     Obj = obj;
+    App = (Object *)DoMethod(obj, MUIM_GetConfigItem, MUIC_Application, 0);
     Data = data;
     Img = image;
     Scr = scr;
     SigBit = sigbit;
     ParentTask = parenttask;
+    MainSigBit = data->SigBit;
   }
 
   ~Args ()
@@ -705,138 +471,43 @@ struct Args
     delete TaskName;
   }
 
-  Object *Obj;
+  Object *Obj, *App;
   STRPTR TaskName, Name;
   struct ImageList *Img;
   struct Screen *Scr;
   struct HTMLviewData *Data;
-  LONG SigBit;
+  LONG SigBit, MainSigBit;
   struct Task *ParentTask;
 };
 
-struct DecoderInfo
+struct DecoderThreadStartupMessage
 {
-  CONST_STRPTR Name;
-  BOOL (*MatchFunc)(UBYTE *);
-  struct Library *Base;
-  struct IClass *Class;
+  struct Message message;
+  struct Args *args;
 };
 
-BOOL MatchGIF (UBYTE *x) { return(*((ULONG *)x) == MAKE_ID('G','I','F','8')); }
-BOOL MatchJPG (UBYTE *x) { return(*((ULONG *)x) == 0xFFD8FFE0 && (*((ULONG *)(((UBYTE *)x) + 6)) == MAKE_ID('J','F','I','F'))); }
-BOOL MatchPNG (UBYTE *x) { return(*((ULONG *)x) == 0x89504e47 && ((ULONG *)x)[1] == 0x0d0a1a0a); }
-BOOL MatchDT  (UNUSED UBYTE *x) { return(TRUE); }
-#define GIFDecoder "gif.decoder"
-#define JPGDecoder "jfif.decoder"
-#define PNGDecoder "png.decoder"
-#define DTDecoder  "datatype.decoder"
+/* Accumulate diagnostic output in a ring-style buffer and rewrite
+   T:htmlview_dt.log on each call. Avoids seek/append portability issues
+   across OS3/OS4/MorphOS. */
+static char   DTLogBuf[8192];
+static ULONG  DTLogLen = 0;
 
-struct DecoderInfo Decoders[] =
+static void DTLog(const char *line)
 {
-  { GIFDecoder, MatchGIF, NULL, NULL },
-  { JPGDecoder, MatchJPG, NULL, NULL },
-  { PNGDecoder, MatchPNG, NULL, NULL },
-  { DTDecoder,  MatchDT,  NULL, NULL },
-  { NULL,       NULL,     NULL, NULL }
-};
+    ULONG need = strlen(line) + 1;
+    if (DTLogLen + need + 1 >= sizeof(DTLogBuf))
+        return; /* silently drop if overflow */
+    memcpy(DTLogBuf + DTLogLen, line, need - 1);
+    DTLogLen += need - 1;
+    DTLogBuf[DTLogLen++] = '\n';
+    DTLogBuf[DTLogLen]   = 0;
 
-CONST_STRPTR DecoderPaths[] =
-{
-  "MUI:Libs/MUI/HTMLview/",
-  "LIBS:MUI/HTMLview/",
-  "MUI:HTMLview/",
-  "PROGDIR:Decoders/",
-  "PROGDIR:MUI/HTMLview/",
-  "LIBS:Decoders/",
-  NULL
-};
-
-struct SignalSemaphore DecoderMutex;
-
-static struct Library *ClassOpen(CONST_STRPTR decoder)
-{
-  struct Library *result;
-  CONST_STRPTR *path = DecoderPaths;
-
-  do {
-
-    char name[64];
-    strcpy(name, *path++);
-    strcat(name, decoder);
-
-    result = OpenLibrary(name, 0);
-
-  } while(!result && *path);
-
-  return(result);
-}
-
-
-Object *NewDecoderObjectA(UBYTE *buf,struct TagItem *attrs)
-{
-  struct TagItem *tags = attrs;
-  struct IClass *cl = NULL;
-  struct DecoderInfo *decoders = Decoders;
-
-	//return 0;
-  ObtainSemaphore(&DecoderMutex);
-
-  while(decoders->Name && !cl)
-  {
-    if(decoders->MatchFunc(buf))
+    BPTR f = Open((STRPTR)"T:htmlview_dt.log", MODE_NEWFILE);
+    if (f)
     {
-      if(!(cl = decoders->Class))
-      {
-        if((decoders->Base = ClassOpen(decoders->Name)))
-        {
-          if((cl = MakeClass(NULL, NULL, GetImageDecoderClass(decoders->Base), sizeof(DecoderData), 0L)))
-          {
-            #if defined(__amigaos3__)
-            cl->cl_Dispatcher.h_SubEntry = (ULONG (*)())ENTRY(DecoderDispatcher);
-            cl->cl_Dispatcher.h_Entry    = (ULONG (*)())HookEntry;
-            cl->cl_Dispatcher.h_Data     = 0;
-            #else
-            cl->cl_Dispatcher.h_SubEntry = 0;
-            cl->cl_Dispatcher.h_Entry    = (HOOKFUNC)ENTRY(DecoderDispatcher);
-            cl->cl_Dispatcher.h_Data     = 0;
-            #endif
-
-            decoders->Class = cl;
-          }
-        }
-      }
+        Write(f, DTLogBuf, DTLogLen);
+        Close(f);
     }
-    decoders++;
-  }
-
-  ReleaseSemaphore(&DecoderMutex);
-
-  if(cl)
-  {
-    return((Object *)NewObjectA(cl, NULL, tags));
-  }
-
-  else return(NULL);
-}
-
-CONSTRUCTOR(PrepareDecoders, 4)
-{
-  memset(&DecoderMutex,0,sizeof(struct SignalSemaphore));
-  InitSemaphore(&DecoderMutex);
-}
-
-DESTRUCTOR(FlushDecoders, 4)
-{
-  struct DecoderInfo *decoders = Decoders;
-  while(decoders->Name)
-  {
-    if(decoders->Class)
-      FreeClass(decoders->Class);
-    if(decoders->Base)
-      CloseLibrary(decoders->Base);
-
-    decoders++;
-  }
 }
 
 extern "C" void DecoderThread(void)
@@ -848,68 +519,222 @@ extern "C" void DecoderThread(void)
   if((startup = (struct DecoderThreadStartupMessage *)GetMsg(&me->pr_MsgPort)) != NULL)
   {
     struct Args *args = startup->args;
+    struct Task *parent = args->ParentTask;
+    ULONG sigbit = args->SigBit;
 
     ReplyMsg((struct Message *)startup);
 
     BOOL result = FALSE;
     struct ImageList *image = args->Img;
-    ULONG width = image->Width, height = image->Height;
-    BOOL dither = args->Data->Share->DitherType;
-    ULONG gamma = args->Data->Share->GammaCorrection;
     struct Hook *loadhook = args->Data->ImageLoadHook;
     struct HTMLview_LoadMsg loadmsg;
-    loadmsg.lm_App = _app(args->Obj);
+    loadmsg.lm_App = args->App;
+
+    {
+        char logbuf[256];
+        sprintf(logbuf, "thread start url=%s", args->Name);
+        DTLog(logbuf);
+    }
+    D(DBF_STARTUP, "DecoderThread: started for %s", args->Name);
 
     struct DecodeItem *item = new (std::nothrow) struct DecodeItem(args->Obj, args->Data, image);
     if (item)
     {
       args->Data->Share->DecodeQueue.InsertElm(item);
-      Signal(args->ParentTask, 1 << args->SigBit);
+      Signal(parent, 1 << sigbit);
 
       loadmsg.lm_Type = HTMLview_Open;
       loadmsg.lm_PageID = item->PageID;
       loadmsg.lm_Params.lm_Open.URL = args->Name;
       loadmsg.lm_Params.lm_Open.Flags = MUIF_HTMLview_LoadMsg_Image;
-      if(CallHookPkt(loadhook, args->Obj, &loadmsg))
+      
+      ULONG openres = CallHookPkt(loadhook, args->Obj, &loadmsg);
       {
-        UBYTE buf[12];
-        loadmsg.lm_Type = HTMLview_Read;
-        loadmsg.lm_Params.lm_Read.Buffer = (char *)buf;
-        loadmsg.lm_Params.lm_Read.Size = 10;
-        ULONG len = CallHookPkt(loadhook, args->Obj, &loadmsg);
-
-    	  struct TagItem attrs[] =
-         {{IDA_StartBuffer,  (ULONG)buf},
-          {IDA_BytesInBuffer,(ULONG)len},
-          {IDA_Width,        (ULONG)width},
-          {IDA_Height,       (ULONG)height},
-          {IDA_Screen,       (ULONG)args->Scr},
-          {IDA_HTMLview,     (ULONG)args->Obj},
-          {IDA_LoadHook,     (ULONG)loadhook},
-          {IDA_LoadMsg,      (ULONG)&loadmsg},
-          {IDA_StatusStruct, (ULONG)item},
-          {IDA_NoDither,     (ULONG)dither},
-          {IDA_Gamma,        (ULONG)gamma},
-          {TAG_DONE,0}};
-        Object *decoder = NewDecoderObjectA(buf,attrs);
-
-        if(decoder)
+          char logbuf[64];
+          sprintf(logbuf, "  hook-open => %lu", openres);
+          DTLog(logbuf);
+      }
+      if(openres)
+      {
+        D(DBF_STARTUP, "DecoderThread: hook open success");
+        char tmpname[64];
+        STRPTR ext = (STRPTR)"";
+        STRPTR url = args->Name;
+        if (strstr(url, ".png") || strstr(url, ".PNG")) ext = (STRPTR)".png";
+        else if (strstr(url, ".gif") || strstr(url, ".GIF")) ext = (STRPTR)".gif";
+        else if (strstr(url, ".jpg") || strstr(url, ".JPG") || strstr(url, ".jpeg")) ext = (STRPTR)".jpg";
+        
+        sprintf(tmpname, "T:hv_%lx_%lx%s", (ULONG)item->PageID, (ULONG)FindTask(NULL), ext);
+        BPTR tmpf = Open(tmpname, MODE_NEWFILE);
         {
-          result = DoMethod(decoder, IDM_Decode);
-          DisposeObject(decoder);
+            char logbuf[128];
+            sprintf(logbuf, "  open(%s, NEWFILE) => %lx", tmpname, (ULONG)tmpf);
+            DTLog(logbuf);
+        }
+        if (tmpf)
+        {
+            char *buf = new (std::nothrow) char[8192];
+            if (buf)
+            {
+                LONG rd;
+                ULONG total = 0;
+                loadmsg.lm_Type = HTMLview_Read;
+                loadmsg.lm_Params.lm_Read.Buffer = buf;
+                loadmsg.lm_Params.lm_Read.Size = 8192;
+                
+                while ((rd = CallHookPkt(loadhook, args->Obj, &loadmsg)) > 0)
+                {
+                    Write(tmpf, buf, rd);
+                    total += rd;
+                    if (item->Abort) break;
+                }
+                delete[] buf;
+                {
+                    char logbuf[64];
+                    sprintf(logbuf, "  recv %lu bytes", total);
+                    DTLog(logbuf);
+                }
+                D(DBF_STARTUP, "DecoderThread: wrote %lu bytes to %s", total, tmpname);
+            }
+            Close(tmpf);
+            
+            if (!item->Abort)
+            {
+                Object *dt = NewDTObject(tmpname,
+                    DTA_GroupID,       GID_PICTURE,
+                    DTA_SourceType,    DTST_FILE,
+                    PDTA_DestMode,     PMODE_V43,
+                    PDTA_Remap,        TRUE,
+                    PDTA_Screen,       args->Scr,
+                    PDTA_UseFriendBitMap, TRUE,
+                    TAG_DONE);
+
+                {
+                    char logbuf[128];
+                    sprintf(logbuf, "  NewDTObject(%s) => %lx ioerr=%ld",
+                            tmpname, (ULONG)dt, IoErr());
+                    DTLog(logbuf);
+                }
+                if (dt)
+                {
+                    D(DBF_STARTUP, "DecoderThread: DT created");
+
+                    /* Trigger layout / colour remap for the target screen. */
+                    DoMethod(dt, DTM_PROCLAYOUT, NULL, 1L);
+
+                    struct BitMapHeader *bmhd = NULL;
+                    struct BitMap *srcbmp = NULL;
+                    UBYTE *mask = NULL;
+
+                    GetDTAttrs(dt,
+                        PDTA_BitMapHeader, (ULONG)&bmhd,
+                        PDTA_DestBitMap,   (ULONG)&srcbmp,
+                        PDTA_MaskPlane,    (ULONG)&mask,
+                        TAG_DONE);
+
+                    /* PDTA_DestBitMap is only populated after PROCLAYOUT;
+                       fall back to the raw source bitmap otherwise. */
+                    if (!srcbmp)
+                        GetDTAttrs(dt, PDTA_BitMap, (ULONG)&srcbmp, TAG_DONE);
+
+                    ULONG width = 0, height = 0;
+                    if (bmhd)
+                    {
+                        width  = bmhd->bmh_Width;
+                        height = bmhd->bmh_Height;
+                    }
+                    else
+                    {
+                        GetDTAttrs(dt,
+                            DTA_NominalHoriz, (ULONG)&width,
+                            DTA_NominalVert,  (ULONG)&height,
+                            TAG_DONE);
+                    }
+
+                    {
+                        char logbuf[160];
+                        sprintf(logbuf,
+                                "  DT %lux%lu srcbmp=%lx mask=%lx bmhd=%lx",
+                                width, height, (ULONG)srcbmp, (ULONG)mask, (ULONG)bmhd);
+                        DTLog(logbuf);
+                    }
+                    D(DBF_STARTUP, "DecoderThread: DT %lux%lu src=%lx mask=%lx",
+                        width, height, (ULONG)srcbmp, (ULONG)mask);
+
+                    struct DecoderData decData;
+                    memset(&decData, 0, sizeof(decData));
+                    decData.Scr = args->Scr;
+                    decData.StatusItem = item;
+                    decData.HTMLview = args->Obj;
+                    decData.LoadHook = loadhook;
+                    decData.LoadMsg = &loadmsg;
+
+                    RenderEngine render(args->Scr, &decData);
+                    BOOL alloc_ok = FALSE;
+                    if (srcbmp && width > 0 && height > 0)
+                    {
+                        alloc_ok = render.AllocateFrame(width, height, 0, DisposeNOP, 0, 0, NULL,
+                                       mask ? TransparencySINGLE : TransparencyNONE, PicFLG_Full);
+                    }
+                    {
+                        char logbuf[128];
+                        sprintf(logbuf, "  AllocateFrame => %s item->Picture=%lx",
+                                alloc_ok ? "OK" : "FAIL", (ULONG)item->Picture);
+                        DTLog(logbuf);
+                    }
+                    if (alloc_ok && item->Picture && item->Picture->BMp)
+                    {
+                        /* BltBitMap both src and dest are friend bitmaps
+                           of args->Scr, so this is a straight copy with
+                           any necessary on-the-fly format conversion. */
+                        BltBitMap(srcbmp, 0, 0,
+                                  item->Picture->BMp, 0, 0,
+                                  width, height,
+                                  0xC0, 0xFF, NULL);
+                        WaitBlit();
+
+                        if (mask && item->Picture->Mask)
+                            CopyMem(mask, item->Picture->Mask, RASSIZE(width, height));
+
+                        item->Enter();
+                        item->CurrentY = height;
+                        item->Started = FALSE;
+                        item->Leave();
+                        result = TRUE;
+                        DTLog("  blit OK");
+                        D(DBF_STARTUP, "DecoderThread: blit OK");
+                    }
+                    else
+                    {
+                        char logbuf[160];
+                        sprintf(logbuf,
+                                "  decode failed: srcbmp=%lx w=%lu h=%lu alloc=%s",
+                                (ULONG)srcbmp, width, height, alloc_ok ? "OK" : "FAIL");
+                        DTLog(logbuf);
+                        D(DBF_STARTUP, "DecoderThread: no source bitmap / AllocateFrame failed");
+                    }
+                    DisposeDTObject(dt);
+                } else {
+                    D(DBF_STARTUP, "DecoderThread: NewDTObject failed for %s", tmpname);
+                }
+            }
+            DeleteFile(tmpname);
         }
 
         loadmsg.lm_Type = HTMLview_Close;
         CallHookPkt(loadhook, args->Obj, &loadmsg);
+      } else {
+          D(DBF_STARTUP, "DecoderThread: hook open failed for %s", args->Name);
       }
-
-      delete args;
 
       item->Enter();
       item->Status = result ? StatusDone : StatusError;
       item->Thread = NULL;
       item->Leave();
+      
+      Signal(parent, 1 << args->MainSigBit);
     }
+    delete args;
   }
 }
 
@@ -918,12 +743,6 @@ VOID DecodeImage (Object *obj, UNUSED struct IClass *cl, struct ImageList *image
   LONG sigbit = 0;
   if(image && (sigbit = AllocSignal(-1)) > 0)
   {
-    if(SetSignal(0L, 1 << sigbit) & (1 << sigbit))
-    {
-      DisplayBeep(NULL);
-      W(DBF_STARTUP, "Signal was already pending!\n");
-    }
-
     STRPTR name = NULL;
     struct List *pscrs = LockPubScreenList();
     for(struct Node *node = pscrs->lh_Head; node->ln_Succ; node = node->ln_Succ)
@@ -942,10 +761,9 @@ VOID DecodeImage (Object *obj, UNUSED struct IClass *cl, struct ImageList *image
     if (!args)
     {
         UnlockPubScreen(NULL,lock);
+        FreeSignal(sigbit);
         return;
     }
-    /*char str_args[10];
-      sprintf(str_args, "%lx", (ULONG)args);*/
 
     #if defined(__PPC__)
     static const BOOL FBlit = FALSE;
@@ -987,16 +805,15 @@ VOID DecodeImage (Object *obj, UNUSED struct IClass *cl, struct ImageList *image
       startup.args = args;
 
       PutMsg(&thread->pr_MsgPort, (struct Message *)&startup);
-      Remove((struct Node *)WaitPort(&replyPort));
+      
+      WaitPort(&replyPort);
+      while (GetMsg(&replyPort));
 
       Wait(1 << sigbit);
+    } else {
+        delete args;
     }
 
     FreeSignal(sigbit);
-  }
-  else
-  {
-    DisplayBeep(NULL);
-    W(DBF_STARTUP, "No image! - %s (%ld)\n", image->ImageName, sigbit);
   }
 }
