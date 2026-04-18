@@ -58,7 +58,7 @@ static const char *test_html =
     "<p>These need bsdsocket.library and a working network stack:</p>"
     "<p><img src=\"http://aminet.net/pics/aminet.png\" alt=\"Aminet Logo (HTTP)\"></p>"
     "<p>Exercises http-&gt;https redirect (requires AmiSSL):</p>"
-    "<p><img src=\"http://www.amigaworld.net/images/awn2.gif\" alt=\"AmigaWorld (HTTP redirect)\"></p>"
+    "<p><img src=\"http://www.amigaworld.net/themes/default/images/logo-top.gif\" alt=\"AmigaWorld (HTTP redirect)\"></p>"
 
     "<h2>Images - Network (HTTPS)</h2>"
     "<p>Direct TLS fetch. Needs amisslmaster.library + amissl.library installed:</p>"
