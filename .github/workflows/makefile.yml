@@ -107,6 +107,8 @@ jobs:
     needs: [build-os3, build-os4, build-morphos]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
       - name: Download all artifacts
