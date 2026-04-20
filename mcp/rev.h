@@ -2,7 +2,7 @@
 
  HTMLview.mcc - HTMLview MUI Custom Class
  Copyright (C) 1997-2000 Allan Odgaard
- Copyright (C) 2005-2007 by HTMLview.mcc Open Source Team
+ Copyright (C) 2005-2026 by HTMLview.mcc Open Source Team
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Lesser General Public
@@ -21,10 +21,10 @@
 ***************************************************************************/
 
 #define LIB_VERSION    13
-#define LIB_REVISION   5
+#define LIB_REVISION   6
 
-#define LIB_REV_STRING "13.5"
-#define LIB_DATE       "15.12.2025"
+#define LIB_REV_STRING "13.6"
+#define LIB_DATE       "20.04.2026"
 
 #if defined(__PPC__)
   #if defined(__MORPHOS__)
@@ -44,4 +44,4 @@
   #define CPU ""
 #endif
 
-#define LIB_COPYRIGHT  "Copyright (C) 2005-2025 HTMLview.mcc Open Source Team"
+#define LIB_COPYRIGHT  "Copyright (C) 2005-2026 HTMLview.mcc Open Source Team"

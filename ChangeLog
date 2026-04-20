@@ -5,6 +5,19 @@ MUI HTMLview MCC class - ChangeLog
 $Id$
 $URL$
 
+2026-04-20  Dimitris Panokostas <midwan@gmail.com>
+
+  * Release 13.6.
+  * mcc/rev.h, mcp/rev.h: bumped LIB_REVISION to 6, LIB_DATE to
+    20.04.2026, and copyright range to 2005-2026.
+  * .github/workflows/makefile.yml: release job now packages each
+    platform's mcc/mcp binaries into a single versioned zip
+    (HTMLview-<tag>-<platform>.zip) instead of uploading loose
+    files that collided across platforms via merge-multiple.
+    Debug/map artefacts and the test.png are stripped from the
+    release bundle; README, COPYING, ChangeLog and AUTHORS are
+    included.
+
 2026-04-18  Dimitris Panokostas <midwan@gmail.com>
 
   * mcc/test_image_hook.h: HTTPS support via AmiSSL. The shared test-program

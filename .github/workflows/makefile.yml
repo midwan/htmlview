@@ -90,11 +90,38 @@ jobs:
         with:
           pattern: htmlview-*
           path: artifacts/
-          merge-multiple: true
+      - name: Package release archives
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF##*/}"
+          mkdir -p release
+          for platform in os3 os4 morphos; do
+            case "$platform" in
+              os3)     bindir=bin_os3 ;;
+              os4)     bindir=bin_os4 ;;
+              morphos) bindir=bin_mos ;;
+            esac
+            src="artifacts/htmlview-${platform}-${GITHUB_SHA}"
+            if [ ! -d "$src" ]; then
+              echo "Missing artifact for $platform at $src" >&2
+              exit 1
+            fi
+            pkg="HTMLview-${tag}-${platform}"
+            mkdir -p "release/${pkg}/mcc" "release/${pkg}/mcp"
+            cp "$src/mcc/${bindir}"/*.mcc         "release/${pkg}/mcc/"
+            cp "$src/mcc/${bindir}"/SimpleTest    "release/${pkg}/mcc/"
+            cp "$src/mcc/${bindir}"/LibLoad_Test  "release/${pkg}/mcc/"
+            cp "$src/mcp/${bindir}"/*.mcp         "release/${pkg}/mcp/"
+            for doc in README COPYING ChangeLog AUTHORS; do
+              [ -f "$doc" ] && cp "$doc" "release/${pkg}/"
+            done
+            (cd release && zip -r "${pkg}.zip" "${pkg}")
+          done
+          ls -la release/
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*
+          files: release/*.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
