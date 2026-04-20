@@ -8,23 +8,14 @@
 #include <utility/tagitem.h>
 #include <stdio.h>
 
-#if defined(__MORPHOS__)
-#include <net/socketbasetags.h>
-#elif defined(__amigaos4__)
-#include <bsdsocket/socketbasetags.h>
-#endif
-
 #if defined(__amigaos4__)
 struct Library          *IntuitionBase;
 struct Library          *MUIMasterBase;
 struct Interface        *IntuitionIFace;
 struct MUIMasterIFace   *IMUIMaster;
-struct Library          *SocketBase;
-struct SocketIFace      *ISocket;
 #else
 struct Library          *MUIMasterBase;
 struct IntuitionBase    *IntuitionBase;
-struct Library          *SocketBase;
 #endif
 struct Library *UtilityBase;
 
@@ -34,7 +25,8 @@ extern void kprintf(const char *fmt, ...);
 static void kprintf(const char *fmt, ...) { (void)fmt; }
 #endif
 
-#include "test_image_hook.h"
+#include "HTMLview_mcc.h"
+#include "net_hook/htmlview_nethook.h"
 
 static struct Hook ImageLoadHook;
 
@@ -148,25 +140,10 @@ int main(void)
         return 20;
     }
 
-    SocketBase = OpenLibrary("bsdsocket.library", 4);
-#if defined(__amigaos4__)
-    if (SocketBase)
-        ISocket = (struct SocketIFace *)GetInterface(SocketBase, "main", 1, NULL);
-#endif
-
-    /* CallHookPkt on m68k and MorphOS passes args in registers (a0=hook,
-       a2=obj, a1=msg); our plain-C TestImageHookFunc expects stack args.
-       HookEntry is the amiga.lib trampoline that does the register->stack
-       conversion. On OS4 hooks are already called with stack args, and
-       HookEntry is not declared, so we assign directly. */
-#if defined(__amigaos4__)
-    ImageLoadHook.h_Entry    = (HOOKFUNC)TestImageHookFunc;
-    ImageLoadHook.h_SubEntry = NULL;
-#else
-    ImageLoadHook.h_Entry    = (HOOKFUNC)HookEntry;
-    ImageLoadHook.h_SubEntry = (HOOKFUNC)TestImageHookFunc;
-#endif
-    ImageLoadHook.h_Data     = NULL;
+    /* The nethook library opens bsdsocket/amisslmaster/amissl on demand
+       from the HTMLview decoder task; nothing to do here beyond wiring
+       the hook pointer into MUI. */
+    HTMLviewNet_InitHook(&ImageLoadHook);
 
     app = MUI_NewObject(MUIC_Application,
         MUIA_Application_Title      , "HTMLView Simple Test",
@@ -227,13 +204,6 @@ int main(void)
         MUI_DisposeObject(app);
     }
 
-    if (SocketBase)
-    {
-#if defined(__amigaos4__)
-        if (ISocket) DropInterface((struct Interface *)ISocket);
-#endif
-        CloseLibrary(SocketBase);
-    }
     if (MUIMasterBase)
     {
 #if defined(__amigaos4__)

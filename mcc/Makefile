@@ -20,6 +20,11 @@
 #
 #***************************************************************************/
 
+# Default goal. The $(AMISSL_SDK_READY) rule is defined earlier in the
+# file than `all`, so without this pin `make` on its own would pick the
+# AmiSSL SDK fetch as the default goal instead of a full build.
+.DEFAULT_GOAL := all
+
 ###########################################################################
 # This makefile is a very generic one. It tries to identify both, the host
 # and the target operating system for which YAM should be compiled.
@@ -133,6 +138,7 @@ MCCTARGET = $(BINDIR)/HTMLview.mcc
 TESTTARGET= $(BINDIR)/HTMLview-Test
 SIMPLETARGET= $(BINDIR)/SimpleTest
 LIBLOADTARGET= $(BINDIR)/LibLoad_Test
+NETHOOKLIB  = $(BINDIR)/libhtmlview_nethook.a
 
 # Common compiler/linker flags
 WARN     = -W -Wall -Wwrite-strings
@@ -168,6 +174,7 @@ ifeq ($(OS), os4)
   CXX     = ppc-amigaos-g++
   STRIP   = ppc-amigaos-strip
   OBJDUMP = ppc-amigaos-objdump
+  AR      = ppc-amigaos-ar
 
   # Compiler/Linker flags
   CRT      = newlib
@@ -193,6 +200,7 @@ ifeq ($(OS), os3)
   CXX     = m68k-amigaos-g++
   STRIP   = m68k-amigaos-strip
   OBJDUMP = m68k-amigaos-objdump
+  AR      = m68k-amigaos-ar
 
   # Compiler/Linker flags
   CPU	  = -m68020-60 -msoft-float
@@ -216,6 +224,7 @@ ifeq ($(OS), mos)
   CXX     = ppc-morphos-g++
   STRIP   = ppc-morphos-strip
   OBJDUMP = ppc-morphos-objdump
+  AR      = ppc-morphos-ar
 
   # Compiler/Linker flags
   CPU     = -mcpu=powerpc
@@ -237,6 +246,7 @@ ifeq ($(OS), aros)
   CXX     = i686-aros-g++
   STRIP   = i686-aros-strip
   OBJDUMP = i686-aros-objdump
+  AR      = i686-aros-ar
 
   # Compiler/Linker flags
   CPU     =
@@ -464,13 +474,21 @@ CATALOGS = $(LOCALE)/deutsch.catalog
 #
 
 # Build test programs for all platforms
-all: $(BINDIR) $(OBJDIR) $(MCCTARGET) $(SIMPLETARGET) $(LIBLOADTARGET) $(BINDIR)/test.png
+all: $(BINDIR) $(OBJDIR) $(MCCTARGET) $(NETHOOKLIB) $(SIMPLETARGET) $(LIBLOADTARGET) $(BINDIR)/test.png
 
 # make the object directories
 $(OBJDIR):
 	@echo "  MKDIR $@"
 	@$(MKDIR) $(OBJDIR)
 	@$(MKDIR) $(OBJDIR)/classes
+	@$(MKDIR) $(OBJDIR)/net_hook
+
+# Order-only prereq used by sources in subdirectories. Needed because the
+# $(OBJDIR) rule above only fires when $(OBJDIR) itself doesn't exist, so
+# reusing an existing $(OBJDIR) from a prior build would otherwise leave
+# the net_hook subdir missing.
+$(OBJDIR)/net_hook:
+	@$(MKDIR) $(OBJDIR)/net_hook
 
 # make the binary directories
 $(BINDIR):
@@ -491,15 +509,24 @@ $(OBJDIR)/mccclass_68k.o: ../include/mccclass_68k.c
 	@echo "  CC    $<"
 	@$(CC) $(CFLAGS) $< -o $@
 
-# Test programs get the AmiSSL include path (if enabled). The explicit
-# rules below shadow the generic %.o: %.c rule so TEST_CFLAGS applies.
-$(OBJDIR)/SimpleTest.o: SimpleTest.c test_image_hook.h $(TEST_DEPS)
+# The net hook library carries all HTTP/TLS/AmiSSL glue. Test programs
+# just #include <net_hook/htmlview_nethook.h> and link against it.
+$(OBJDIR)/net_hook/htmlview_nethook.o: net_hook/htmlview_nethook.c \
+    net_hook/htmlview_nethook.h HTMLview_mcc.h $(TEST_DEPS) | $(OBJDIR)/net_hook
 	@echo "  CC    $<"
 	@$(CC) $(CFLAGS) $(TEST_CFLAGS) $< -o $@
 
-$(OBJDIR)/LibLoad_Test.o: LibLoad_Test.c test_image_hook.h $(TEST_DEPS)
+$(NETHOOKLIB): $(OBJDIR)/net_hook/htmlview_nethook.o | $(BINDIR)
+	@echo "  AR    $@"
+	@$(AR) rcs $@ $^
+
+$(OBJDIR)/SimpleTest.o: SimpleTest.c net_hook/htmlview_nethook.h
 	@echo "  CC    $<"
-	@$(CC) $(CFLAGS) $(TEST_CFLAGS) $< -o $@
+	@$(CC) $(CFLAGS) $< -o $@
+
+$(OBJDIR)/LibLoad_Test.o: LibLoad_Test.c net_hook/htmlview_nethook.h
+	@echo "  CC    $<"
+	@$(CC) $(CFLAGS) $< -o $@
 
 #
 
@@ -507,21 +534,21 @@ $(OBJDIR)/LibLoad_Test.o: LibLoad_Test.c test_image_hook.h $(TEST_DEPS)
 LIBOBJS = $(filter-out $(OBJDIR)/library.o $(OBJDIR)/crtclasses_begin.o $(OBJDIR)/crtclasses_end.o, $(MCCOBJS))
 
 
-$(SIMPLETARGET): $(OBJDIR)/SimpleTest.o
+$(SIMPLETARGET): $(OBJDIR)/SimpleTest.o $(NETHOOKLIB)
 	@echo "  LD    $@"
 ifneq (,$(DEBUG))
-	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/SimpleTest.o $(LDLIBS) $(TEST_LDLIBS) -ldebug -Wl,-Map,$@.map
+	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/SimpleTest.o -L$(BINDIR) -lhtmlview_nethook $(LDLIBS) $(TEST_LDLIBS) -ldebug -Wl,-Map,$@.map
 else
-	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/SimpleTest.o $(LDLIBS) $(TEST_LDLIBS) -Wl,-Map,$@.map
+	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/SimpleTest.o -L$(BINDIR) -lhtmlview_nethook $(LDLIBS) $(TEST_LDLIBS) -Wl,-Map,$@.map
 endif
 	@$(STRIP) --preserve-dates -R.comment -R.sdata2 -S -o $@ $@.debug
 
-$(LIBLOADTARGET): $(OBJDIR)/LibLoad_Test.o
+$(LIBLOADTARGET): $(OBJDIR)/LibLoad_Test.o $(NETHOOKLIB)
 	@echo "  LD    $@"
 ifneq (,$(DEBUG))
-	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/LibLoad_Test.o $(LDLIBS) $(TEST_LDLIBS) -ldebug -Wl,-Map,$@.map
+	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/LibLoad_Test.o -L$(BINDIR) -lhtmlview_nethook $(LDLIBS) $(TEST_LDLIBS) -ldebug -Wl,-Map,$@.map
 else
-	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/LibLoad_Test.o $(LDLIBS) $(TEST_LDLIBS) -Wl,-Map,$@.map
+	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/LibLoad_Test.o -L$(BINDIR) -lhtmlview_nethook $(LDLIBS) $(TEST_LDLIBS) -Wl,-Map,$@.map
 endif
 	@$(STRIP) --preserve-dates -R.comment -R.sdata2 -S -o $@ $@.debug
 
@@ -563,6 +590,7 @@ clean:
 	-$(RM) $(TESTTARGET) $(TESTTARGET).debug $(TESTTARGET).map
 	-$(RM) $(SIMPLETARGET) $(SIMPLETARGET).debug $(SIMPLETARGET).map
 	-$(RM) $(LIBLOADTARGET) $(LIBLOADTARGET).debug $(LIBLOADTARGET).map
+	-$(RM) $(NETHOOKLIB) $(OBJDIR)/net_hook/htmlview_nethook.o
 	-$(RM) $(MCCOBJS) $(TESTOBJS) $(M68KSTUBS)
 
 .PHONY: distclean

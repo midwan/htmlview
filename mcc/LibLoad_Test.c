@@ -7,11 +7,6 @@
 #include <libraries/mui.h>
 #include <intuition/intuition.h>
 #include <utility/tagitem.h>
-#if defined(__MORPHOS__)
-#include <net/socketbasetags.h>
-#elif defined(__amigaos4__)
-#include <bsdsocket/socketbasetags.h>
-#endif
 #include <stdio.h>
 
 #if defined(__amigaos4__)
@@ -19,15 +14,13 @@ struct Library        *IntuitionBase;
 struct Library        *MUIMasterBase;
 struct IntuitionIFace *IIntuition;
 struct MUIMasterIFace *IMUIMaster;
-struct Library        *SocketBase;
-struct SocketIFace    *ISocket;
 #else
 struct IntuitionBase *IntuitionBase;
 struct Library       *MUIMasterBase;
-struct Library       *SocketBase;
 #endif
 
-#include "test_image_hook.h"
+#include "HTMLview_mcc.h"
+#include "net_hook/htmlview_nethook.h"
 
 enum {
     MSG_OPEN_HTMLVIEW = 1,
@@ -111,12 +104,8 @@ int main(int argc, char **argv)
     (void)argc;
     (void)argv;
 
-    SocketBase = OpenLibrary("bsdsocket.library", 4);
-#if defined(__amigaos4__)
-    if (SocketBase)
-        ISocket = (struct SocketIFace *)GetInterface(SocketBase, "main", 1, NULL);
-#endif
-    /* Socket library is optional -- we still support local files without it. */
+    /* bsdsocket / AmiSSL are opened on demand by the nethook library from
+       the HTMLview decoder task -- nothing to do here at startup. */
 
 #if defined(__amigaos4__)
     IntuitionBase = OpenLibrary("intuition.library", 39);
@@ -135,19 +124,7 @@ int main(int argc, char **argv)
         goto cleanup;
     }
 
-    /* CallHookPkt on m68k and MorphOS passes args in registers (a0=hook,
-       a2=obj, a1=msg); our plain-C TestImageHookFunc expects stack args.
-       HookEntry is the amiga.lib trampoline that does the register->stack
-       conversion. On OS4 hooks are already called with stack args, and
-       HookEntry is not declared, so we assign directly. */
-#if defined(__amigaos4__)
-    loadHook.h_Entry    = (HOOKFUNC)TestImageHookFunc;
-    loadHook.h_SubEntry = NULL;
-#else
-    loadHook.h_Entry    = (HOOKFUNC)HookEntry;
-    loadHook.h_SubEntry = (HOOKFUNC)TestImageHookFunc;
-#endif
-    loadHook.h_Data     = NULL;
+    HTMLviewNet_InitHook(&loadHook);
 
     app = MUI_NewObject(MUIC_Application,
         MUIA_Application_Title,      (ULONG)"LibLoad Test",
@@ -258,15 +235,9 @@ cleanup:
         if (IIntuition) DropInterface((struct Interface *)IIntuition);
         CloseLibrary(IntuitionBase);
     }
-    if (SocketBase)
-    {
-        if (ISocket) DropInterface((struct Interface *)ISocket);
-        CloseLibrary(SocketBase);
-    }
 #else
     if (MUIMasterBase) CloseLibrary(MUIMasterBase);
     if (IntuitionBase) CloseLibrary((struct Library *)IntuitionBase);
-    if (SocketBase)    CloseLibrary(SocketBase);
 #endif
 
     return 0;
