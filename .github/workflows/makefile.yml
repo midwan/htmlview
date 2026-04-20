@@ -25,10 +25,18 @@ jobs:
         uses: docker://sacredbanana/amiga-compiler:m68k-amigaos
         with:
           args: sh -c "cd mcp && make clean && make OS=os3"
+      - name: Verify build products
+        run: |
+          set -e
+          ls mcc/bin_os3/HTMLview.mcc
+          ls mcc/bin_os3/SimpleTest
+          ls mcc/bin_os3/LibLoad_Test
+          ls mcp/bin_os3/HTMLview.mcp
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: htmlview-os3-${{ github.sha }}
+          if-no-files-found: error
           path: |
             mcc/bin_os3/*.mcc
             mcc/bin_os3/SimpleTest
@@ -47,10 +55,18 @@ jobs:
         uses: docker://sacredbanana/amiga-compiler:ppc-amigaos
         with:
           args: sh -c "cd mcp && make clean && make OS=os4"
+      - name: Verify build products
+        run: |
+          set -e
+          ls mcc/bin_os4/HTMLview.mcc
+          ls mcc/bin_os4/SimpleTest
+          ls mcc/bin_os4/LibLoad_Test
+          ls mcp/bin_os4/HTMLview.mcp
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: htmlview-os4-${{ github.sha }}
+          if-no-files-found: error
           path: |
             mcc/bin_os4/*.mcc
             mcc/bin_os4/SimpleTest
@@ -69,10 +85,18 @@ jobs:
         uses: docker://sacredbanana/amiga-compiler:ppc-morphos
         with:
           args: sh -c "cd mcp && make clean && make OS=mos"
+      - name: Verify build products
+        run: |
+          set -e
+          ls mcc/bin_mos/HTMLview.mcc
+          ls mcc/bin_mos/SimpleTest
+          ls mcc/bin_mos/LibLoad_Test
+          ls mcp/bin_mos/HTMLview.mcp
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: htmlview-morphos-${{ github.sha }}
+          if-no-files-found: error
           path: |
             mcc/bin_mos/*.mcc
             mcc/bin_mos/SimpleTest
