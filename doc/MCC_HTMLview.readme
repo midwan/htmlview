@@ -1,5 +1,5 @@
 Short:        HTMLview custom class for MUI, v13.6
-Author:       HTMLview.mcc Open Source Team
+Author:       Dimitris Panokostas <midwan@gmail.com>
 Uploader:     Dimitris Panokostas <midwan@gmail.com>
 Type:         dev/mui
 Version:      13.6
@@ -47,9 +47,9 @@ LEGALESE
 ********
 
 HTMLview.mcc was originally written in 1995 and is Copyright (C)
-1995-2000 by Allan Odgaard. Since version 13 (December 2007) the gadget
-is maintained and Copyright (C) 2005-2026 by the HTMLview.mcc Open Source
-Team.
+1995-2000 by Allan Odgaard. The current maintainer since 2023 is
+Dimitris Panokostas <midwan@gmail.com>; the GitHub fork is Copyright (C)
+2023-2026.
 
 HTMLview.mcc is distributed under the GNU Lesser General Public License
 (LGPL). Development is hosted on GitHub:
