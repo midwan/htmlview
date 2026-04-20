@@ -14,25 +14,60 @@
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  Lesser General Public License for more details.
 
- HTMLview class Support Site:  http://www.sf.net/projects/htmlview-mcc/
-
- $Id$
+ Project home:   https://github.com/midwan/htmlview
 
 ***************************************************************************/
 
 With full permission of the previous author (Allan Odgaard) HTMLview.mcc
-12.6+ is hereby released as free software under the GNU Lesser General Public
-License. Please read this license (COPYING) and make sure you understand the
-terms and conditions of this license.
+12.6+ is released as free software under the GNU Lesser General Public
+License. Please read COPYING for the full terms.
 
-HTMLview.mcc is compiled with GCC v2, v3 and v4+ compilers. All required
-third party header files should already be included in the SVN repository.
-However, please note that you might need some more third party tools/utilities
-not included/listed here.
 
-If you want to contribute to the development of HTMLview.mcc please register
-with SourceForge.net and notify one of the project admins of the HTMLview.mcc
-project available at http://www.sf.net/projects/htmlview-mcc/
+BUILDING
+--------
 
-Jens Langner
-April, 2005
+The class and its reference test programs cross-compile from macOS/Linux
+using the Docker toolchain images published by sacredbanana:
+
+  # AmigaOS 3 (m68k)
+  docker run --rm -v "$(pwd):/work" -w /work/mcc \
+      sacredbanana/amiga-compiler:m68k-amigaos sh -c "make -f makefile OS=os3"
+
+  # AmigaOS 4 (ppc)
+  docker run --rm -v "$(pwd):/work" -w /work/mcc \
+      sacredbanana/amiga-compiler:ppc-amigaos sh -c "make -f makefile OS=os4"
+
+  # MorphOS (ppc)
+  docker run --rm -v "$(pwd):/work" -w /work/mcc \
+      sacredbanana/amiga-compiler:ppc-morphos sh -c "make -f makefile OS=mos"
+
+Build products land under mcc/bin_<os>/:
+
+  HTMLview.mcc                -- the MUI custom class binary
+  libhtmlview_nethook.a       -- reusable image/content load hook library
+  SimpleTest, LibLoad_Test    -- reference programs exercising the class
+
+
+LINKING THE NET HOOK
+--------------------
+
+Host applications that want the built-in HTTP / HTTPS load hook link
+libhtmlview_nethook.a and call HTMLviewNet_InitHook(&hook) at startup --
+see mcc/net_hook/htmlview_nethook.h for the full API. The hook opens
+bsdsocket / AmiSSL lazily from the decoder task, so the host does not
+need to OpenLibrary any networking library itself.
+
+Optional runtime knobs (all hook-local, no MUI tags required):
+
+  HTMLviewNet_SetCABundle(path)    -- override AmiSSL CA trust store
+  HTMLviewNet_SetVerifyMode(mode)  -- AUTO / NONE / PEER
+  HTMLviewNet_SetCacheDir(path)    -- enable on-disk response cache
+  HTMLviewNet_SetCacheTTL(seconds) -- fallback TTL for unhinted responses
+
+
+CONTRIBUTING
+------------
+
+Issues and pull requests are welcome on GitHub. The roadmap for ongoing
+work lives in IMPROVEMENTS.md at the repo root; each phase there is
+scoped to be independently mergeable.

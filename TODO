@@ -9,18 +9,22 @@
  License as published by the Free Software Foundation; either
  version 2.1 of the License, or (at your option) any later version.
 
- This library is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Lesser General Public License for more details.
-
- HTMLview class Support Site:  http://www.sf.net/projects/htmlview-mcc/
-
- $Id$
-
 ***************************************************************************/
 
-Items that ought to be implemented in future HTMLview.mcc releases:
-----------------------------------------------------------------------
+The active improvement roadmap is maintained in IMPROVEMENTS.md at the
+repository root. Each numbered phase there is independently mergeable
+and carries its own scope / acceptance notes.
 
-* ????
+High-level buckets currently pending:
+
+  * Charset handling (UTF-8 -> Latin-1 transliteration)
+  * CSS subset (inline style + <style> blocks)
+  * picture.datatype fallback for WebP / SVG / AVIF
+  * Parser bugs: body-less text, entities without ;, FS dither tile seams
+  * Headless rendering regression tests in CI
+  * Memory-safety pass (ASan + fuzzing)
+  * gzip Content-Encoding
+  * Cookie jar hook (opt-in)
+  * target="_blank" notification
+
+See IMPROVEMENTS.md for the full list.
