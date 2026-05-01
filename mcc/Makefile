@@ -138,6 +138,7 @@ MCCTARGET = $(BINDIR)/HTMLview.mcc
 TESTTARGET= $(BINDIR)/HTMLview-Test
 SIMPLETARGET= $(BINDIR)/SimpleTest
 LIBLOADTARGET= $(BINDIR)/LibLoad_Test
+RAPAGUITARGET= $(BINDIR)/RapaguiPattern_Test
 NETHOOKLIB  = $(BINDIR)/libhtmlview_nethook.a
 
 # Common compiler/linker flags
@@ -474,7 +475,7 @@ CATALOGS = $(LOCALE)/deutsch.catalog
 #
 
 # Build test programs for all platforms
-all: $(BINDIR) $(OBJDIR) $(MCCTARGET) $(NETHOOKLIB) $(SIMPLETARGET) $(LIBLOADTARGET) $(BINDIR)/test.png
+all: $(BINDIR) $(OBJDIR) $(MCCTARGET) $(NETHOOKLIB) $(SIMPLETARGET) $(LIBLOADTARGET) $(RAPAGUITARGET) $(BINDIR)/test.png
 
 # make the object directories
 $(OBJDIR):
@@ -528,6 +529,12 @@ $(OBJDIR)/LibLoad_Test.o: LibLoad_Test.c net_hook/htmlview_nethook.h
 	@echo "  CC    $<"
 	@$(CC) $(CFLAGS) $< -o $@
 
+# RapaguiPattern_Test does not pull in the net hook -- it deliberately
+# uses the built-in DefaultLoadHook to mirror RapaGUI's bare creation.
+$(OBJDIR)/RapaguiPattern_Test.o: RapaguiPattern_Test.c HTMLview_mcc.h
+	@echo "  CC    $<"
+	@$(CC) $(CFLAGS) $< -o $@
+
 #
 
 # Link against all MCC objects EXCEPT library.o (globals conflict)
@@ -549,6 +556,15 @@ ifneq (,$(DEBUG))
 	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/LibLoad_Test.o -L$(BINDIR) -lhtmlview_nethook $(LDLIBS) $(TEST_LDLIBS) -ldebug -Wl,-Map,$@.map
 else
 	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/LibLoad_Test.o -L$(BINDIR) -lhtmlview_nethook $(LDLIBS) $(TEST_LDLIBS) -Wl,-Map,$@.map
+endif
+	@$(STRIP) --preserve-dates -R.comment -R.sdata2 -S -o $@ $@.debug
+
+$(RAPAGUITARGET): $(OBJDIR)/RapaguiPattern_Test.o
+	@echo "  LD    $@"
+ifneq (,$(DEBUG))
+	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/RapaguiPattern_Test.o $(LDLIBS) -ldebug -Wl,-Map,$@.map
+else
+	@$(CXX) $(filter-out -nostartfiles,$(LDFLAGS)) -o $@.debug $(OBJDIR)/RapaguiPattern_Test.o $(LDLIBS) -Wl,-Map,$@.map
 endif
 	@$(STRIP) --preserve-dates -R.comment -R.sdata2 -S -o $@ $@.debug
 
@@ -590,6 +606,7 @@ clean:
 	-$(RM) $(TESTTARGET) $(TESTTARGET).debug $(TESTTARGET).map
 	-$(RM) $(SIMPLETARGET) $(SIMPLETARGET).debug $(SIMPLETARGET).map
 	-$(RM) $(LIBLOADTARGET) $(LIBLOADTARGET).debug $(LIBLOADTARGET).map
+	-$(RM) $(RAPAGUITARGET) $(RAPAGUITARGET).debug $(RAPAGUITARGET).map
 	-$(RM) $(NETHOOKLIB) $(OBJDIR)/net_hook/htmlview_nethook.o
 	-$(RM) $(MCCOBJS) $(TESTOBJS) $(M68KSTUBS)
 

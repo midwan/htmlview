@@ -334,27 +334,35 @@ CPPDISPATCHER(_Dispatcher)
 
           sprintf(data->ParseThreadName, "HTMLview ParseThread 0x%08lx", (ULONG)obj);
 
-          if((tag = FindTagItem(MUIA_HTMLview_Scrollbars, nmsg->ops_AttrList)))
-          {
-            D(DBF_STARTUP, "creating scollgroupclass object...");
+          /* MUIA_HTMLview_Scrollbars used to wrap the gadget in a
+           * private ScrollGroupClass. That confused class-introspecting
+           * callers like RapaGUI/Hollywood, whose MOAI "Contents" setter
+           * silently dropped writes because the wrapper didn't look like
+           * an HTMLview. Returning the bare gadget always lets the
+           * caller see our real class. Callers that previously relied
+           * on the auto-wrapper for scrollbars need to wrap externally
+           * with MUIC_Scrollgroup -- SimpleTest.c shows the pattern. */
+          D(DBF_STARTUP, "created HTMLview object.");
 
-            return (ULONG)NewObject(ScrollGroupClass->mcc_Class, NULL,
-                                    MUIA_ScrollGroup_Scrolling,  tag->ti_Data,
-                                    MUIA_ScrollGroup_HTMLview,   obj,
-                                    TAG_DONE);
-          }
-          else
-          {
-            D(DBF_STARTUP, "created HTMLview object.");
-
-            RETURN(obj);
-            return((ULONG)obj);
-          }
+          RETURN(obj);
+          return((ULONG)obj);
         }
         else
         {
 		  D(DBF_STARTUP, "MsgPort NOT Created!!");
-          CoerceMethod(cl, obj, OM_DISPOSE);
+          /* Our own OM_DISPOSE assumes a fully-constructed instance
+           * (parse thread alive, MessagePort wired up, ParseThreadName
+           * filled, ...). Calling it on this half-built object touches
+           * uninitialised state and reboots the machine on MUI 4+
+           * (PC=0x2C2-style crash via a corrupt member). Instead, free
+           * only what we did set up and defer to the super class. */
+          if(data->Flags & FLG_RootObj)
+          {
+            delete data->Share;
+            data->Share = NULL;
+            data->Flags &= ~FLG_RootObj;
+          }
+          CoerceMethod(cl->cl_Super, obj, OM_DISPOSE);
         }
       }
     }

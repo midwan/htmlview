@@ -123,10 +123,16 @@ static BOOL ClassInit(UNUSED struct Library *base)
   if((CyberGfxBase = OpenLibrary("cybergraphics.library", 40)) &&
     GETINTERFACE(ICyberGfx, struct CyberGfxIFace*, CyberGfxBase))
   {
-    if((ScrollGroupClass = MUI_CreateCustomClass(NULL, MUIC_Virtgroup, NULL, GetScrollGroupDataSize(), ENTRY(ScrollGroupDispatcher))))
+    /* CPPDISPATCHERENTRY -- not bare ENTRY -- so MUI calls the asm gate
+     * (gate_<name>) that maps a0/a1/a2 register args to the C++
+     * dispatcher's stack args. With plain ENTRY, NewObject(mcc_Class,
+     * ...) jumps straight into the C++ function with bogus args and
+     * crashes inside intuition.library before our OM_NEW even starts
+     * (PC=0x2C2-style failure on Amidon/MUI 4-5). */
+    if((ScrollGroupClass = MUI_CreateCustomClass(NULL, MUIC_Virtgroup, NULL, GetScrollGroupDataSize(), CPPDISPATCHERENTRY(ScrollGroupDispatcher))))
     {
   	  #ifdef USEMUISTRINGS
-      if((StringClass = MUI_CreateCustomClass(NULL, MUIC_String, NULL, sizeof(struct StringData), ENTRY(StringDispatcher))))
+      if((StringClass = MUI_CreateCustomClass(NULL, MUIC_String, NULL, sizeof(struct StringData), CPPDISPATCHERENTRY(StringDispatcher))))
       #endif
   	  {
       	RETURN(TRUE);

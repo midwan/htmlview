@@ -87,6 +87,12 @@ void kprintf(const char *formatString,...)
 	va_end(va);
 }
 #elif defined(__amigaos3__)
+/* In DEBUG builds we link -ldebug, which provides the system kprintf().
+ * Defining one here too produces a "multiple definition" link error,
+ * so this local fallback is only compiled into release builds (where
+ * the D() macros are no-ops anyway and this kprintf rarely gets used --
+ * mainly by SetupDebug() if it ever runs in a release MCC). */
+#ifndef DEBUG
 extern "C" void KPrintF(const char *fmt, ...);
 void kprintf(const char *formatString, ...)
 {
@@ -97,6 +103,7 @@ void kprintf(const char *formatString, ...)
     KPrintF("%s", buf);
     va_end(va);
 }
+#endif
 #endif
 
 /****************************************************************************/

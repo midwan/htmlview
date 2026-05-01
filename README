@@ -65,6 +65,18 @@ Optional runtime knobs (all hook-local, no MUI tags required):
   HTMLviewNet_SetCacheTTL(seconds) -- fallback TTL for unhinted responses
 
 
+BEHAVIOUR NOTES
+---------------
+
+  * MUIA_HTMLview_Scrollbars is now a no-op: OM_NEW always returns the
+    bare HTMLview gadget. Callers that want scrollbars wrap the gadget
+    externally with MUIC_Scrollgroup -- SimpleTest.c shows the pattern.
+    The legacy auto-wrap path was incompatible with class-introspecting
+    hosts (e.g. RapaGUI) and the change makes the gadget cooperate with
+    them. Apps that built directly against ScrollGroupClass are
+    unaffected; the class is still registered.
+
+
 CONTRIBUTING
 ------------
 

@@ -148,7 +148,7 @@ CPPDISPATCHER(ScrollGroupDispatcher)
     case OM_NEW:
     {
       struct opSet *nmsg = (struct opSet *)msg;
-      Object *HTMLview, *Knob, *RightScroll, *BottomScroll;
+      Object *HTMLview = NULL, *Knob, *RightScroll, *BottomScroll;
       struct TagItem *tag;
 
       ENTER();
@@ -157,6 +157,13 @@ CPPDISPATCHER(ScrollGroupDispatcher)
       {
         HTMLview = (Object *)tag->ti_Data;
         tag->ti_Tag = Child;
+      }
+      else
+      {
+        /* No inner HTMLview supplied -- nothing to wrap. Bail rather
+         * than dereferencing an uninitialised pointer below. */
+        LEAVE();
+        break;
       }
 
       RightScroll = ScrollbarObject, End;
