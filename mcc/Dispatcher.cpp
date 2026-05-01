@@ -581,6 +581,23 @@ CPPDISPATCHER(_Dispatcher)
         b = bmsg->bottom;
 
 	  	if (l>r || t>b) return 0;
+
+        /* MUI 3.x (muimaster.library v20 = MUI 3.9, v19 = MUI 3.8) calls
+        ** MUIM_Backfill with bounds that can extend outside the gadget,
+        ** which makes us paint over our siblings ("stuntzi hack").
+        ** MUI 4+ (v21+) calls Backfill correctly with partial regions
+        ** inside the gadget; applying the equality guard there would
+        ** skip every render and produce the blue checkerboard pattern.
+        */
+        if (MUIMasterBase->lib_Version <= 20)
+        {
+          if (!(l==_mleft(obj) && t==_mtop(obj) && r==_mright(obj) && b==_mbottom(obj)))
+          {
+            D(DBF_ALWAYS, "HTMLview: %ld %ld, %ld %ld, %ld %ld, %ld %ld",
+              l,_mleft(obj),t,_mtop(obj),r,_mright(obj),b,_mbottom(obj));
+            return 0;
+          }
+        }
 	  }
 
       struct RastPort *rp = _rp(obj);
