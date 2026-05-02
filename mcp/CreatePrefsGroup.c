@@ -73,12 +73,23 @@ Object *
 ostring(APTR key,APTR help)
 {
     #ifdef USEBETTERSTRING
-    return BetterStringObject,
-    #else
-    return StringObject,
-    #endif
+    Object *obj;
+
+    obj = BetterStringObject,
         _HELP(help),
-		MUIA_ControlChar, GetKeyChar(key,TRUE),
+        MUIA_ControlChar, GetKeyChar(key,TRUE),
+        MUIA_CycleChain,  TRUE,
+        StringFrame,
+        //MUIA_Textinput_AdvanceOnCR, TRUE,
+    End;
+
+    if(obj)
+        return obj;
+    #endif
+
+    return StringObject,
+        _HELP(help),
+        MUIA_ControlChar, GetKeyChar(key,TRUE),
         MUIA_CycleChain,  TRUE,
         StringFrame,
         //MUIA_Textinput_AdvanceOnCR, TRUE,
@@ -163,6 +174,7 @@ Object *CreatePrefsGroup(Object *parent,struct InstData_MCP *data)
 
     Object **objs = data->Objects;
     Object *group, *sample;
+    Object *keySetting;
     #ifdef USEHOTKEY
     Object *snoop;
     #endif
@@ -176,6 +188,64 @@ Object *CreatePrefsGroup(Object *parent,struct InstData_MCP *data)
     Dither[0] = GetStr(MSG_Images_Dither_FS);
     Dither[1] = GetStr(MSG_Images_Dither_None);
     Dither[2] = NULL;
+
+    /* Pre-create the key-setting object: try HotkeyString.mcc first,
+     * fall back to a plain String gadget if the class is not installed. */
+    #ifdef USEHOTKEY
+    snoop = NULL;
+    {
+        Object *keyObj = HotkeyStringObject,
+            StringFrame,
+            MUIA_ControlChar, GetKeyChar(MSG_PageScroll_Key_Key,TRUE),
+            MUIA_CycleChain,  TRUE,
+            MUIA_HotkeyString_Snoop, FALSE,
+            End;
+
+        if(keyObj)
+        {
+            Object *snoopBtn = obutton(MSG_Hotkey_Snoop,0,0);
+            if(snoopBtn)
+            {
+                keySetting = HGroup,
+                    MUIA_Group_HorizSpacing,1,
+                    Child, keyObj,
+                    Child, snoopBtn,
+                    End;
+
+                if(keySetting)
+                {
+                    objs[PageScrollKey] = keyObj;
+                    snoop = snoopBtn;
+                }
+                else
+                {
+                    MUI_DisposeObject(snoopBtn);
+                    MUI_DisposeObject(keyObj);
+                }
+            }
+            else
+            {
+                MUI_DisposeObject(keyObj);
+            }
+        }
+    }
+    if(!snoop)
+    {
+        objs[PageScrollKey] = StringObject,
+            MUIA_ControlChar, GetKeyChar(MSG_PageScroll_Key_Key,TRUE),
+            MUIA_CycleChain,  TRUE,
+            StringFrame,
+            End;
+        keySetting = objs[PageScrollKey];
+    }
+    #else
+    objs[PageScrollKey] = StringObject,
+        MUIA_ControlChar, GetKeyChar(MSG_PageScroll_Key_Key,TRUE),
+        MUIA_CycleChain,  TRUE,
+        StringFrame,
+        End;
+    keySetting = objs[PageScrollKey];
+    #endif
 
     group = RegisterObject,
         MUIA_CycleChain, TRUE,
@@ -367,25 +437,7 @@ Object *CreatePrefsGroup(Object *parent,struct InstData_MCP *data)
                         End,
 
                     Child, olabel2(MSG_PageScroll_Key,MSG_PageScroll_Key_Key),
-                    #ifdef USEHOTKEY
-                    Child, HGroup,
-                    	MUIA_Group_HorizSpacing,1,
-                        Child, objs[PageScrollKey] = HotkeyStringObject,
-                            StringFrame,
-                            MUIA_ControlChar, GetKeyChar(MSG_PageScroll_Key_Key,TRUE),
-                            MUIA_CycleChain,  TRUE,
-                            MUIA_HotkeyString_Snoop, FALSE,
-                            End,
-                        Child, snoop = obutton(MSG_Hotkey_Snoop,0,0),
-                        End,
-                    #else
-                    Child, objs[PageScrollKey] = KeyadjustObject,
-                        MUIA_ControlChar, GetKeyChar(MSG_PageScroll_Key_Key,TRUE),
-                        MUIA_CycleChain, TRUE,
-                        MUIA_Keyadjust_AllowMouseEvents,  FALSE,
-                        MUIA_Keyadjust_AllowMultipleKeys, FALSE,
-                        End,
-                    #endif
+                    Child, keySetting,
 
                     Child, olabel2(MSG_PageScroll_Move,MSG_PageScroll_Move_Key),
                     Child, objs[PageScrollMove] = SliderObject,
@@ -424,14 +476,17 @@ Object *CreatePrefsGroup(Object *parent,struct InstData_MCP *data)
         End;
 
     #ifdef USEHOTKEY
-    SetAttrs(snoop,
-        MUIA_Weight, 0,
-        MUIA_CycleChain, TRUE,
-        MUIA_InputMode, MUIV_InputMode_Toggle,
-        TAG_DONE);
+    if(snoop)
+    {
+        SetAttrs(snoop,
+            MUIA_Weight, 0,
+            MUIA_CycleChain, TRUE,
+            MUIA_InputMode, MUIV_InputMode_Toggle,
+            TAG_DONE);
 
-    DoMethod(snoop, MUIM_Notify, MUIA_Selected, MUIV_EveryTime, (ULONG)objs[PageScrollKey], 3, MUIM_Set, MUIA_HotkeyString_Snoop, MUIV_TriggerValue);
-    DoMethod(snoop, MUIM_Notify, MUIA_Selected, TRUE, MUIV_Notify_Window, 3, MUIM_Set, MUIA_Window_ActiveObject, (ULONG)objs[PageScrollKey]);
+        DoMethod(snoop, MUIM_Notify, MUIA_Selected, MUIV_EveryTime, (ULONG)objs[PageScrollKey], 3, MUIM_Set, MUIA_HotkeyString_Snoop, MUIV_TriggerValue);
+        DoMethod(snoop, MUIM_Notify, MUIA_Selected, TRUE, MUIV_Notify_Window, 3, MUIM_Set, MUIA_Window_ActiveObject, (ULONG)objs[PageScrollKey]);
+    }
     #endif
 
     DoMethod(sample,MUIM_Notify,MUIA_Pressed,FALSE,MUIV_Notify_Application,4,
