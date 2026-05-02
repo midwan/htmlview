@@ -6,7 +6,7 @@ Originally written by Allan Odgaard in the late 1990s, now actively maintained
 and modernised. HTMLview renders HTML 4 inside any MUI application — email
 clients, documentation viewers, help browsers, and more.
 
-**Current version:** 13.7 · **License:** LGPL 2.1+ · **Repo:**
+**Current version:** 13.8 · **License:** LGPL 2.1+ · **Repo:**
 <https://github.com/midwan/htmlview>
 
 
@@ -75,7 +75,7 @@ HTMLviewNet_SetCacheTTL(seconds)   // fallback TTL for unhinted responses
 ## What's new since v12
 
 Maintenance picked up at v12.6 (the last SourceForge release). Highlights
-through v13.7:
+through v13.8:
 
 - **Robustness** — runtime fallback for missing external MCCs (BetterString,
   HotkeyString); NULL-safety in HTML form gadgets; no system crashes when
