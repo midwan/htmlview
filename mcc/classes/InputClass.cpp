@@ -121,7 +121,7 @@ VOID InputClass::AppendGadget (struct AppendGadgetMessage &amsg)
       break;
 */
       case Input_Button:
-        obj = SimpleButton(Value);
+        obj = SimpleButton(Value ? Value : (STRPTR)"");
       break;
 
       case Input_Submit:
