@@ -83,9 +83,7 @@ extern "C" STRPTR ConvertUTF8(CONST_STRPTR src, ULONG srcLen)
 
   /* CodesetsIsValidUTF8 expects a NUL-terminated string. The caller
      hands us a buffer of known length, but in practice MUIA_HTMLview_
-     Contents passes a C string, so it's fine. Still, check the prefix
-     up to srcLen as a defensive measure: scan and reject early on a
-     malformed sequence. */
+     Contents passes a C string, so it's fine. */
   if(!CodesetsIsValidUTF8((CONST_STRPTR)src))
     return NULL;
 

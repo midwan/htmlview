@@ -165,7 +165,13 @@ static const char *test_html =
     "<p>If codesets.library v6+ is installed, the UTF-8 bytes below "
     "were converted to the system codeset before parsing -- the "
     "accented characters should render correctly:</p>"
-    "<p>Caf\xc3\xa9, na\xc3\xafve, fa\xc3\xa7ade, jalape\xc3\xb1o, "
+    /* String literal hex escapes \xNN consume hex digits greedily,
+       so \xa7ade reads as a single 5-digit escape (0xA7ADE,
+       truncated to 0xDE) instead of the byte 0xa7 followed by
+       literal 'ade'. Split with adjacent literals to break the
+       escape — likewise wherever a hex digit (0-9, a-f) follows a
+       2-byte UTF-8 escape. */
+    "<p>Caf\xc3\xa9, na\xc3\xaf""ve, fa\xc3\xa7""ade, jalape\xc3\xb1o, "
     "\xc3\xa9\xc3\xa8\xc3\xaa\xc3\xab \xc3\xa1\xc3\xa0\xc3\xa2\xc3\xa4 "
     "\xc3\xb1 \xc3\x9f.</p>"
     "<p>Without codesets.library installed these appear as raw UTF-8 "
