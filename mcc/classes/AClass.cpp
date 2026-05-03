@@ -61,10 +61,14 @@ VOID AClass::Parse(struct ParseMessage &pmsg)
 
   struct ArgList args[] =
   {
-    { "HREF",   &URL,     ARG_URL, NULL },
-    { "NAME",   &Name,    ARG_URL, NULL },
-    { "TARGET", &Target,  ARG_URL, NULL },
-    { NULL,     NULL,     0,       NULL }
+    { "HREF",   &URL,     ARG_URL,    NULL },
+    { "NAME",   &Name,    ARG_URL,    NULL },
+    { "TARGET", &Target,  ARG_URL,    NULL },
+    /* Preserve the class attribute so Mastodon clients (and anyone
+       else) can distinguish mention vs. hashtag vs. plain link at
+       click time. */
+    { "CLASS",  &Class,   ARG_STRING, NULL },
+    { NULL,     NULL,     0,          NULL }
   };
   ScanArgs(pmsg.Locked, args);
 

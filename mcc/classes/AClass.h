@@ -30,16 +30,21 @@
 class AClass : public TreeClass
 {
   public:
-    AClass () : TreeClass() { ; }
-    ~AClass () { delete URL; delete Target; delete Name; }
+    AClass () : TreeClass() { Class = NULL; }
+    ~AClass () { delete URL; delete Target; delete Name; delete Class; }
     VOID Parse (struct ParseMessage &pmsg);
     VOID Render (struct RenderMessage &rmsg);
     WORD InDomain (struct RenderMessage&) { return(InsideLayer); }
     BOOL HitTest (struct HitTestMessage &hmsg);
     class AClass *FindAnchor (STRPTR name);
 
+    /* HTML class= attribute, used by Mastodon (mention/hashtag/etc).
+       Borrowed by HitTestMessage::LinkClass — see HitTest below. */
+    STRPTR linkClass() const { return Class; }
+
   protected:
     STRPTR URL, Name, Target;
+    STRPTR Class;
 };
 
 #endif // ACLASS_H
