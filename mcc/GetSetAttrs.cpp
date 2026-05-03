@@ -31,6 +31,7 @@
 #include "General.h"
 #include "ParseMessage.h"
 #include "SharedData.h"
+#include "Charset.h"
 #include "private.h"
 
 #include "classes/BaseClass.h"
@@ -78,8 +79,22 @@ BOOL mSet (Object *obj, struct IClass *cl, struct opSet *msg)
 
       case MUIA_HTMLview_Contents:
       {
-        ULONG length = strlen((STRPTR)ti_Data);
-        struct BufferParseMessage pmsg((STRPTR)ti_Data, length);
+        STRPTR input  = (STRPTR)ti_Data;
+        ULONG  length = strlen(input);
+
+        /* If the caller's content is UTF-8 (e.g., a Mastodon toot),
+           convert to the system codeset before parsing. ConvertUTF8
+           returns NULL for ASCII-only input or when codesets.library
+           isn't installed; in that case we parse the original bytes
+           directly. */
+        STRPTR converted = ConvertUTF8(input, length);
+        if(converted)
+        {
+          input  = converted;
+          length = strlen(converted);
+        }
+
+        struct BufferParseMessage pmsg(input, length);
         pmsg.HTMLview = obj;
 
         class HostClass *hobj, *old_object = data->HostObject;
@@ -126,6 +141,12 @@ BOOL mSet (Object *obj, struct IClass *cl, struct opSet *msg)
 
     	    data->Flags |= FLG_HostObjNotUsed;
 	    }
+
+        /* BufferParseMessage copies the input into its own buffer in
+           the constructor, so we can release the converted copy as
+           soon as parsing is done. */
+        if(converted)
+          FreeConvertedStr(converted);
       }
       break;
 

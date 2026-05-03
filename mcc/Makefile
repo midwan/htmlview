@@ -350,6 +350,7 @@ MCCOBJS = \
           $(OBJDIR)/AllocateColours.o \
           $(OBJDIR)/Animation.o \
           $(OBJDIR)/BitmapScaler.o \
+          $(OBJDIR)/Charset.o \
           $(OBJDIR)/Classes.o \
           $(OBJDIR)/Colours.o \
           $(OBJDIR)/Config.o \
@@ -429,6 +430,7 @@ TESTOBJS= $(OBJDIR)/library_cpp.o \
           $(OBJDIR)/AllocateColours.o \
           $(OBJDIR)/Animation.o \
           $(OBJDIR)/BitmapScaler.o \
+          $(OBJDIR)/Charset.o \
           $(OBJDIR)/Classes.o \
           $(OBJDIR)/Colours.o \
           $(OBJDIR)/Config.o \

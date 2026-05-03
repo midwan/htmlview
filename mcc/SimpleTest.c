@@ -152,6 +152,16 @@ static const char *test_html =
     "  <img src=\"PROGDIR:test.png\" alt=\"width-only 48\" width=\"48\">"
     "</p>"
 
+    "<h2>UTF-8 (codesets.library)</h2>"
+    "<p>If codesets.library v6+ is installed, the bytes below were "
+    "converted from UTF-8 to the system codeset before parsing — the "
+    "accented characters should render correctly:</p>"
+    "<p>Caf\xc3\xa9, na\xc3\xafve, fa\xc3\xa7ade, jalape\xc3\xb1o, "
+    "\xc3\xa9\xc3\xa8\xc3\xaa\xc3\xab \xc3\xa1\xc3\xa0\xc3\xa2\xc3\xa4 "
+    "\xc3\xb1 \xc3\x9f.</p>"
+    "<p>(Without codesets.library installed these will appear as "
+    "raw UTF-8 byte pairs — the previous behaviour.)</p>"
+
     "<h2>Body-less rendering</h2>"
     "<p>The fragment below has no &lt;body&gt; tag — its content "
     "should still render. (Tested via the full document above; this "

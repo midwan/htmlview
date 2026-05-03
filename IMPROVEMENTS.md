@@ -105,22 +105,29 @@ networking, this is painful; a tiny keyed cache gives huge wins.
 
 ---
 
-## Phase 4 — UTF-8 / charset handling `[ ]`
+## Phase 4 — UTF-8 / charset handling `[~]`
 
-**Goal.** Pages with `<meta charset="utf-8">` or HTTP `Content-Type:
-text/html; charset=utf-8` currently render mojibake. Minimum viable:
-detect charset, transliterate UTF-8 → Latin-1 (replacing unrepresentable
-codepoints with `?` or the nearest entity).
+**Done — content path.** `MUIA_HTMLview_Contents` now passes its bytes
+through `mcc/Charset.cpp::ConvertUTF8` before parsing. When valid UTF-8
+input is detected, the bytes are converted to the system codeset via
+`codesets.library` v6+'s `CodesetsUTF8ToStrA(CSA_MapForeignChars=TRUE)`.
+ASCII-only input and absent `codesets.library` both pass through
+unchanged (no-op). This covers amidon2's flow (toot/notification HTML
+fed via Contents).
 
-**Touches.**
-- `mcc/Entities.cpp`, `mcc/ParseMessage.cpp` most likely.
-- Possibly new `mcc/Charset.cpp` for the transliteration table.
-- Hook contract gains: net hook passes the `Content-Type` charset hint
-  into the parser (either via `HTMLview_LoadMsg` extension or side-channel
-  tag — needs a small design call).
+**Still open.**
+- Network fetch path (`ParseThread.cpp` URL loads): the parser there
+  consumes bytes directly from the HTTP body and doesn't run them
+  through `ConvertUTF8`. A future patch should buffer the body, sniff
+  charset (`<meta charset>` or `Content-Type` from the load hook), and
+  convert via the same `ConvertUTF8` helper.
+- Charset hint plumbing on `HTMLview_LoadMsg` so the net hook can hand
+  the parser a non-UTF-8 charset name.
 
-**Acceptance.** A UTF-8 page with `© é ñ` renders them as the Latin-1
-byte equivalents, not as two-byte sequences.
+**Acceptance (current).** A UTF-8 string passed via `MUIA_HTMLview_Contents`
+that contains `© é ñ` renders them as the system-codeset byte
+equivalents on machines with `codesets.library` installed; falls back
+to raw UTF-8 byte pairs without it (previous behaviour).
 
 ---
 

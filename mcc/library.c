@@ -77,6 +77,10 @@ extern void _init(void);
 extern void _fini(void);
 extern ULONG GetHTMLviewDataSize(void);
 
+/* From Charset.cpp — optional codesets.library lifecycle. */
+extern BOOL OpenCodesets(void);
+extern void CloseCodesets(void);
+
 /* Dummy exit for libnix linkage in shared library. Application links against standard CRT. */
 /* Don't define for MorphOS - libnix.c already provides exit() */
 #if !defined(__MORPHOS__)
@@ -123,6 +127,11 @@ static BOOL ClassInit(UNUSED struct Library *base)
   if((CyberGfxBase = OpenLibrary("cybergraphics.library", 40)) &&
     GETINTERFACE(ICyberGfx, struct CyberGfxIFace*, CyberGfxBase))
   {
+    /* codesets.library is OPTIONAL — open it best-effort, after the
+       mandatory libs have all loaded. ConvertUTF8 falls through to
+       a no-op when the library isn't installed. */
+    OpenCodesets();
+
     /* CPPDISPATCHERENTRY -- not bare ENTRY -- so MUI calls the asm gate
      * (gate_<name>) that maps a0/a1/a2 register args to the C++
      * dispatcher's stack args. With plain ENTRY, NewObject(mcc_Class,
@@ -164,6 +173,8 @@ static VOID ClassExpunge(UNUSED struct Library *base)
     MUI_DeleteCustomClass(ScrollGroupClass);
     ScrollGroupClass = NULL;
   }
+
+  CloseCodesets();
 
   if(CyberGfxBase)
   {
