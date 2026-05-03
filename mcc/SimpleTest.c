@@ -28,7 +28,24 @@ static void kprintf(const char *fmt, ...) { (void)fmt; }
 #include "HTMLview_mcc.h"
 #include "net_hook/htmlview_nethook.h"
 
+#include <SDI_hook.h>
+
 static struct Hook ImageLoadHook;
+static Object *gHtml;
+
+/* Notification hook for MUIA_HTMLview_ClickedURL: prints the URL
+   passed via MUIV_TriggerValue plus the class= read out of the
+   HTMLview via GetAttr(MUIA_HTMLview_LinkClass). */
+HOOKPROTONHNO(ClickHandler, void, STRPTR url)
+{
+    STRPTR linkClass = NULL;
+    if (gHtml)
+        GetAttr(MUIA_HTMLview_LinkClass, gHtml, (ULONG *)&linkClass);
+    printf("CLICK url=\"%s\" class=\"%s\"\n",
+           url ? (char *)url : "(null)",
+           linkClass ? (char *)linkClass : "(none)");
+}
+MakeStaticHook(ClickHookFn, ClickHandler);
 
 /* Keep this HTML blob self-contained; PROGDIR:test.png is copied into the
    binary directory by the Makefile, and the HTTP entries exercise the
@@ -190,6 +207,10 @@ int main(void)
         SetAttrs(win, MUIA_Window_Open, TRUE, TAG_DONE);
 
         SetAttrs(html, MUIA_HTMLview_Contents, (ULONG)test_html, TAG_DONE);
+
+        gHtml = html;
+        DoMethod(html, MUIM_Notify, MUIA_HTMLview_ClickedURL, MUIV_EveryTime,
+                 app, 3, MUIM_CallHook, &ClickHookFn, MUIV_TriggerValue);
 
         ULONG open = 0;
         GetAttr(MUIA_Window_Open, win, &open);
