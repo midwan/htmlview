@@ -190,15 +190,18 @@ struct PictureFrame *ImageCache::FindImage (STRPTR url, ULONG width, ULONG heigh
         LastEntry = (LastEntry->Next = prev);
         prev->Next = NULL;
       }
-      D(DBF_STARTUP, "ImageCache: HIT  %s (%lux%lu cached, asked %lux%lu)",
-        url, (ULONG)prev->Picture->Width, (ULONG)prev->Picture->Height,
-        (ULONG)width, (ULONG)height);
+      D(DBF_STARTUP, "ImageCache: HIT  %s (%lux%lu)",
+        url, (ULONG)prev->Picture->Width, (ULONG)prev->Picture->Height);
       ReleaseSemaphore(&ImageMutex);
       return(prev->Picture);
     }
     preprev = prev;
   }
-  D(DBF_STARTUP, "ImageCache: MISS %s (asked %lux%lu)", url, (ULONG)width, (ULONG)height);
+  /* width/height are kept on the public signature for ABI compat with
+     the old per-(URL,W,H) cache key. All in-tree callers now pass 0,0
+     so the size dimension is intentionally omitted from the log. */
+  (void)width; (void)height;
+  D(DBF_STARTUP, "ImageCache: MISS %s", url);
   ReleaseSemaphore(&ImageMutex);
   return(NULL);
 }

@@ -46,11 +46,10 @@ extern "C" struct BitMap *ScaleBitmapTo(struct BitMap *src,
   if(!dst)
     return NULL;
 
-  struct BitScaleArgs args;
-  /* BitScaleArgs has reserved fields; zero everything before filling. */
-  for(UWORD i = 0; i < sizeof(args); i++)
-    ((UBYTE *)&args)[i] = 0;
-
+  /* BitMapScale is documented as synchronous, but BitScaleArgs has
+     reserved fields that must be zero — value-initialise the whole
+     struct before filling the inputs. */
+  struct BitScaleArgs args = {};
   args.bsa_SrcWidth    = srcW;
   args.bsa_SrcHeight   = srcH;
   args.bsa_DestWidth   = dstW;
@@ -63,7 +62,6 @@ extern "C" struct BitMap *ScaleBitmapTo(struct BitMap *src,
   args.bsa_DestBitMap  = dst;
 
   BitMapScale(&args);
-  WaitBlit();
   return dst;
 }
 
@@ -73,7 +71,12 @@ extern "C" UBYTE *ScaleMaskTo(UBYTE *srcMask, UWORD srcW, UWORD srcH,
   if(!srcMask || !srcW || !srcH || !dstW || !dstH)
     return NULL;
 
-  /* Wrap raw mask plane in a 1-bit BitMap so BitMapScale can chew it. */
+  /* BitMapScale on a 1-plane bitmap performs nearest-neighbour bit
+     replication. Edges of the resulting mask will not be a clean
+     resampling — for non-integer scale ratios the silhouette gets
+     mild jitter — but for HTML <img> usage (Mastodon avatars,
+     thumbnails) the result is acceptable and far better than the
+     "no scaling at all" baseline. */
   struct BitMap srcBM;
   InitBitMap(&srcBM, 1, srcW, srcH);
   srcBM.Planes[0] = (PLANEPTR)srcMask;
@@ -86,10 +89,7 @@ extern "C" UBYTE *ScaleMaskTo(UBYTE *srcMask, UWORD srcW, UWORD srcH,
   InitBitMap(&dstBM, 1, dstW, dstH);
   dstBM.Planes[0] = (PLANEPTR)dstMask;
 
-  struct BitScaleArgs args;
-  for(UWORD i = 0; i < sizeof(args); i++)
-    ((UBYTE *)&args)[i] = 0;
-
+  struct BitScaleArgs args = {};
   args.bsa_SrcWidth    = srcW;
   args.bsa_SrcHeight   = srcH;
   args.bsa_DestWidth   = dstW;
@@ -102,7 +102,6 @@ extern "C" UBYTE *ScaleMaskTo(UBYTE *srcMask, UWORD srcW, UWORD srcH,
   args.bsa_DestBitMap  = &dstBM;
 
   BitMapScale(&args);
-  WaitBlit();
   return dstMask;
 }
 

@@ -1436,7 +1436,10 @@ CPPDISPATCHER(_Dispatcher)
         struct HitTestMessage *hmsg = new (std::nothrow) struct HitTestMessage(x + data->Left, y + data->Top, host);
         if (!hmsg) return 0;
         if(!host->HitTest(*hmsg))
+        {
           hmsg->URL = NULL;
+          hmsg->LinkClass = NULL;
+        }
 
         struct MUIR_HTMLview_GetContextInfo *cinfo = &data->ContextInfo;
         STRPTR src[] = { hmsg->URL, hmsg->ImgSrc, hmsg->Frame, hmsg->Background };

@@ -34,9 +34,11 @@ extern "C" {
 #endif
 
 /* Compute the destination dimensions BitMapScale() will produce for a
-   given (srcW,srcH)->(dstW,dstH) request. Exposed separately so a
-   host-side test can pin the rounding rules without linking
-   graphics.library. */
+   given (srcW,srcH)->(dstW,dstH) request.
+
+   Exposed for the host-side unit test only — there is no production
+   caller. The point is to pin the (dst ? dst : src) rounding rule so
+   a future "smarter" implementation can't silently drift. */
 VOID ComputeScaledExtent(UWORD srcW, UWORD srcH,
                          UWORD dstW, UWORD dstH,
                          UWORD *outW, UWORD *outH);

@@ -38,12 +38,10 @@ class AClass : public TreeClass
     BOOL HitTest (struct HitTestMessage &hmsg);
     class AClass *FindAnchor (STRPTR name);
 
-    /* HTML class= attribute, used by Mastodon (mention/hashtag/etc).
-       Borrowed by HitTestMessage::LinkClass — see HitTest below. */
-    STRPTR linkClass() const { return Class; }
-
   protected:
     STRPTR URL, Name, Target;
+    /* HTML class= attribute (Mastodon mention/hashtag/etc), or NULL.
+       Stamped onto HitTestMessage::LinkClass during HitTest. */
     STRPTR Class;
 };
 

@@ -50,9 +50,16 @@ ImgClass::~ImgClass ()
 
 VOID ImgClass::FreeScaledBitmap ()
 {
+  if(!ScaledBMp && !ScaledMask)
+    return;
+
+  /* Both the bitmap and the mask are read by the blitter (the mask
+     as the third arg to BltMaskRPort), so a single fence covers
+     freeing either. */
+  WaitBlit();
+
   if(ScaledBMp)
   {
-    WaitBlit();
     FreeBitMap(ScaledBMp);
     ScaledBMp = NULL;
   }

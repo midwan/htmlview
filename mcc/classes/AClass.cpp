@@ -30,18 +30,18 @@ BOOL AClass::HitTest (struct HitTestMessage &hmsg)
   if(URL)
   {
     class SuperClass *oldlink = hmsg.Obj;
-    STRPTR oldClass = hmsg.LinkClass;
-
     hmsg.Obj = this;
     hmsg.URL = URL;
     hmsg.Target = Target;
     hmsg.LinkClass = Class;     /* may be NULL */
 
+    /* Like URL/Target, LinkClass is left set on miss — the dispatcher
+       null-resets the relevant fields when the overall HitTest returns
+       FALSE, see Dispatcher.cpp::MUIM_HTMLview_GetContextInfo. */
     if(TreeClass::HitTest(hmsg))
       return(TRUE);
 
     hmsg.Obj = oldlink;
-    hmsg.LinkClass = oldClass;
     return(FALSE);
   }
   else
