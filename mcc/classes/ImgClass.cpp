@@ -716,6 +716,10 @@ VOID ImgClass::Render (struct RenderMessage &rmsg)
 
 BOOL ImgClass::TestPixel(UBYTE *line, LONG x)
 {
-  return(line[x >> 3] & (1 << (x%7)));
+  /* AmigaOS bitplanes are MSB-first within each byte: pixel 0 is the
+     top bit of byte 0. The original (1 << (x % 7)) was wrong on two
+     counts — modulo 7 instead of 8 (so bit 7 mapped to bit 0), and
+     LSB-first instead of MSB-first ordering. */
+  return(line[x >> 3] & (0x80 >> (x & 7)));
 }
 
