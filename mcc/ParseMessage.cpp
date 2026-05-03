@@ -185,6 +185,14 @@ BOOL ParseMessage::PreloadAndConvert ()
      reuse Buffer/Upper directly because the Fetch() machinery
      interleaves them with progressive read state — easier to read
      into a fresh buffer and swap once we know the full size. */
+
+  /* Hard cap for the URL-load body. A misbehaving (or malicious)
+     server could otherwise stream gigabytes; on a small Amiga that
+     would thrash the memory pool before allocation finally fails.
+     8 MiB is comfortably above any realistic HTML page and small
+     enough to bail predictably on systems with modest free RAM. */
+  const ULONG MAX_BODY = 8u * 1024u * 1024u;
+
   ULONG total    = 0;
   ULONG capacity = 4096;
   STRPTR buf = new (std::nothrow) char[capacity];
@@ -195,6 +203,8 @@ BOOL ParseMessage::PreloadAndConvert ()
     if(total + 1024 > capacity)
     {
       ULONG newcap = capacity * 2;
+      if(newcap > MAX_BODY) newcap = MAX_BODY;
+      if(newcap <= capacity) break;     /* Cap reached. */
       STRPTR nb = new (std::nothrow) char[newcap];
       if(!nb)
       {
@@ -206,6 +216,7 @@ BOOL ParseMessage::PreloadAndConvert ()
       buf      = nb;
       capacity = newcap;
     }
+    if(total + 1 >= capacity) break;    /* No more room to grow. */
     LONG n = ReadURL(buf + total, capacity - total - 1);
     if(n <= 0) break;
     total += n;
