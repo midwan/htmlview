@@ -765,57 +765,19 @@ extern "C" void DecoderThread(void)
   }
 }
 
-/* Walk an ImageList's Objects and feed each one a ready-to-use
-   PictureFrame (for cache-hit short-circuit). Returns TRUE if any
-   receiver asked for a relayout. */
-static BOOL DispatchCachedImage (struct ImageList *image, struct PictureFrame *pic)
-{
-  BOOL relayout = FALSE;
-  for(struct ObjectList *first = image->Objects; first; first = first->Next)
-  {
-    if(first->Obj->ReceiveImage(pic))
-      relayout = TRUE;
-  }
-  return relayout;
-}
-
 VOID DecodeImage (Object *obj, UNUSED struct IClass *cl, struct ImageList *image, struct HTMLviewData *data)
 {
-  if(!image)
-    return;
-
-  /* Cache-hit short-circuit: by the time the parser hands LoadImages
-     this list, another HTMLview sharing our SharedData (or even our
-     own previous parse pass) may have already populated the cache
-     for this URL. Walk the receivers, fire ReceiveImage on each,
-     and skip spawning a decoder thread entirely.
-
-     ImgClass::Layout already self-checks the cache when it lays out
-     each <img>, so this is mostly an optimisation against the race
-     window between parse-time gmsg.AddImage and layout-time
-     FindImage. It also covers the case where two HTMLviews finish
-     parsing at almost the same time and both reach LoadImages
-     before either has run a Layout pass. */
-  struct PictureFrame *cached = data->Share->ImageStorage->FindImage(image->ImageName);
-  if(cached)
-  {
-    BOOL needRelayout = DispatchCachedImage(image, cached);
-    if(needRelayout && data->HostObject)
-    {
-      data->Flags |= FLG_NotResized;
-      if(DoMethod(obj, MUIM_Group_InitChange))
-      {
-        data->LayoutMsg.Reset(data->Width, data->Height);
-        data->HostObject->Relayout(TRUE);
-        DoMethod(obj, MUIM_Group_ExitChange);
-      }
-      data->Flags &= ~FLG_NotResized;
-    }
-    return;
-  }
-
+  /* Note: a previous revision short-circuited here on cache hit by
+     calling ReceiveImage on each receiver and triggering a Relayout
+     from inside LoadImages. That turned out to be unsafe — observed
+     to correlate with decoder-thread crashes during fast notification
+     navigation in amidon2. ImgClass::Layout already self-checks the
+     cache when it lays out each <img>, so the optimisation was
+     redundant for most flows. The remaining dedup piece
+     (AddImage rejecting duplicate URLs) lives in ImageCache::AddImage
+     and stays. */
   LONG sigbit = 0;
-  if((sigbit = AllocSignal(-1)) > 0)
+  if(image && (sigbit = AllocSignal(-1)) > 0)
   {
     STRPTR name = NULL;
     struct List *pscrs = LockPubScreenList();
