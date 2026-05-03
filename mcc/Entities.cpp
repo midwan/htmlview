@@ -135,30 +135,46 @@ struct EntityInfo EntityTable[] =
 
 static struct EntityInfo *TFind (struct TNode *node, CONST_STRPTR str)
 {
-  UBYTE chr, src = *str++;
+  /* Longest-prefix match against the ternary tree of named entities.
+     The original code only accepted entities terminated by ';' or
+     end-of-string; HTML5 (and amidon2's Mastodon snippets) sometimes
+     emit unterminated entities like '&amp text' which silently
+     dropped before. Walks the tree, and at every terminal node
+     ('\0' SplitChar) records the payload as the best-so-far match
+     and continues looking for a longer prefix down the Right branch
+     (which holds entries that share the same prefix). On a mismatch
+     or end-of-input we fall back to the latest recorded match. */
+
+  UBYTE chr;
+  UBYTE src = *str++;
+  struct EntityInfo *best = NULL;
 
   while(node)
   {
-    if((chr = node->SplitChar) == '\0')
+    chr = node->SplitChar;
+    if(chr == '\0')
     {
-      /* This allow entities to end with a white space */
-/*      if(IsWhitespace(src))
-      {
-        node = node->Middle;
-        break;
-      }
-*/    }
-
+      /* Terminal — record candidate. Middle is union-aliased with
+         Data, which here is the EntityInfo. Continue down Right to
+         see if a longer entry matches. */
+      best = (struct EntityInfo *)node->Middle;
+      node = node->Right;
+      continue;
+    }
+    if(src == ';' || src == '\0')
+      break;
     if(src < chr)
       node = node->Left;
     else if(src > chr)
       node = node->Right;
-    else if((node = node->Middle), src)
-      src = (src = *str++) == ';' ? 0 : src;
-    else break;
+    else
+    {
+      node = node->Middle;
+      src = *str++;
+    }
   }
 
-  return (struct EntityInfo *)node;
+  return best;
 }
 
 struct TNode *EntityTree = NULL;

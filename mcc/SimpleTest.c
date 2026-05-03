@@ -131,6 +131,9 @@ static const char *test_html =
 
     "<h2>Entities</h2>"
     "<p>&copy; &reg; &trade; &lt; &gt; &amp; &larr; &rarr;</p>"
+    "<p>Unterminated (no trailing semicolon, HTML5 lenient): "
+    "&amp text, &copy 2026, &lt span&gt content&lt/span&gt, "
+    "Tom &amp Jerry.</p>"
 
     "<h2>Mastodon avatar scaling</h2>"
     "<p>Same PROGDIR:test.png at six sizes. The scaled cells must "
