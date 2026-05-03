@@ -28,6 +28,7 @@
 
 #include "General.h"
 #include "ParseMessage.h"
+#include "Charset.h"
 #include <new>
 
 BOOL ParseMessage::OpenURL (STRPTR url, Object *htmlview, ULONG flags)
@@ -176,6 +177,75 @@ VOID ParseMessage::SetError (ULONG error)
 {
   Status = error;
   Current = Upper;
+}
+
+BOOL ParseMessage::PreloadAndConvert ()
+{
+  /* Drain the response body into a growing local buffer. We can't
+     reuse Buffer/Upper directly because the Fetch() machinery
+     interleaves them with progressive read state — easier to read
+     into a fresh buffer and swap once we know the full size. */
+  ULONG total    = 0;
+  ULONG capacity = 4096;
+  STRPTR buf = new (std::nothrow) char[capacity];
+  if(!buf) return FALSE;
+
+  for(;;)
+  {
+    if(total + 1024 > capacity)
+    {
+      ULONG newcap = capacity * 2;
+      STRPTR nb = new (std::nothrow) char[newcap];
+      if(!nb)
+      {
+        delete[] buf;
+        return FALSE;
+      }
+      memcpy(nb, buf, total);
+      delete[] buf;
+      buf      = nb;
+      capacity = newcap;
+    }
+    LONG n = ReadURL(buf + total, capacity - total - 1);
+    if(n <= 0) break;
+    total += n;
+  }
+  buf[total] = '\0';
+  CloseURL();
+
+  /* Run the drained body through codesets.library when applicable.
+     ConvertUTF8 returns NULL on ASCII-only input or when the library
+     isn't installed — in either case we keep `buf` as the parse
+     buffer. */
+  STRPTR converted = ConvertUTF8(buf, total);
+  if(converted)
+  {
+    ULONG cLen = strlen(converted);
+    STRPTR cb = new (std::nothrow) char[cLen + 1];
+    if(cb)
+    {
+      memcpy(cb, converted, cLen + 1);
+      delete[] buf;
+      buf   = cb;
+      total = cLen;
+    }
+    /* If allocation for cb failed, fall through with the original
+       UTF-8 bytes — degraded but safe. */
+    FreeConvertedStr(converted);
+  }
+
+  /* Swap into ParseMessage's owned buffer slot. */
+  delete[] Buffer;
+  Buffer   = buf;
+  Locked   = buf;
+  Current  = buf;
+  Upper    = buf + total;
+  Size     = total + 1;
+  Total    = total;
+  Parsed   = 0;
+  Status   = ParseMsg_Succes;     /* No more network reads. */
+
+  return TRUE;
 }
 
 BOOL ParseMessage::Fetch (UWORD len)

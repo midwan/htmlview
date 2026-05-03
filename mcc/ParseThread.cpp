@@ -131,6 +131,15 @@ extern "C" void ParseThread(void)
         {
           pmsg.WriteURL(args->PostData);
 
+          /* Drain the response into a single buffer and run it through
+             ConvertUTF8 before parsing. Trades progressive HTML render
+             for charset stability — UTF-8 sequences can no longer split
+             across read-buffer boundaries, and Mastodon-style content
+             with é/ñ/etc. now renders correctly when codesets.library
+             is installed. Image fetches happen via a separate hook so
+             they remain progressive. */
+          pmsg.PreloadAndConvert();
+
           if(pmsg.Fetch(32) && *pmsg.Current != '<')
             pmsg.NextStartBracket();
 

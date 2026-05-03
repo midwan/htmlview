@@ -105,29 +105,29 @@ networking, this is painful; a tiny keyed cache gives huge wins.
 
 ---
 
-## Phase 4 — UTF-8 / charset handling `[~]`
+## Phase 4 — UTF-8 / charset handling `[x]`
 
-**Done — content path.** `MUIA_HTMLview_Contents` now passes its bytes
-through `mcc/Charset.cpp::ConvertUTF8` before parsing. When valid UTF-8
-input is detected, the bytes are converted to the system codeset via
-`codesets.library` v6+'s `CodesetsUTF8ToStrA(CSA_MapForeignChars=TRUE)`.
-ASCII-only input and absent `codesets.library` both pass through
-unchanged (no-op). This covers amidon2's flow (toot/notification HTML
-fed via Contents).
+**Done.** Both the content path and the URL-load path run incoming
+bytes through `mcc/Charset.cpp::ConvertUTF8`:
 
-**Still open.**
-- Network fetch path (`ParseThread.cpp` URL loads): the parser there
-  consumes bytes directly from the HTTP body and doesn't run them
-  through `ConvertUTF8`. A future patch should buffer the body, sniff
-  charset (`<meta charset>` or `Content-Type` from the load hook), and
-  convert via the same `ConvertUTF8` helper.
-- Charset hint plumbing on `HTMLview_LoadMsg` so the net hook can hand
-  the parser a non-UTF-8 charset name.
+- `MUIA_HTMLview_Contents` — converted in `GetSetAttrs.cpp` before
+  `BufferParseMessage`.
+- URL loads (`ParseThread.cpp`) — `ParseMessage::PreloadAndConvert`
+  drains the response body, runs `ConvertUTF8`, and swaps in the
+  converted buffer before parsing begins. This trades the previous
+  progressive HTML render for charset stability (UTF-8 sequences can
+  no longer split across read-buffer boundaries). Image fetches
+  remain progressive because they go through a separate hook.
 
-**Acceptance (current).** A UTF-8 string passed via `MUIA_HTMLview_Contents`
-that contains `© é ñ` renders them as the system-codeset byte
-equivalents on machines with `codesets.library` installed; falls back
-to raw UTF-8 byte pairs without it (previous behaviour).
+When valid UTF-8 input is detected the bytes are converted to the
+system codeset via `codesets.library` v6+'s
+`CodesetsUTF8ToStrA(CSA_MapForeignChars=TRUE)`. ASCII-only input and
+absent `codesets.library` both pass through unchanged (no-op).
+
+**Future.** A `<meta charset>` / `Content-Type` sniffer for non-UTF-8
+inputs (e.g. shift_jis pages) would slot into the same `ConvertUTF8`
+call site by passing a different `CSA_SourceCodeset` tag — left for a
+follow-up phase if anyone asks for it.
 
 ---
 

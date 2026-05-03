@@ -46,6 +46,16 @@ struct ParseMessage
   VOID WriteURL (STRPTR buffer);
   VOID CloseURL ();
 
+  /* Drain the entire response body into Buffer, then run it through
+     ConvertUTF8 and replace Buffer with the converted bytes. Sets
+     Status = ParseMsg_Succes so subsequent Fetch() calls don't issue
+     more ReadURL requests — they just walk the loaded buffer. Used
+     for the URL-load path (ParseThread.cpp) so the parser sees a
+     complete, charset-stable byte stream. Returns FALSE on alloc
+     failure, in which case the existing streaming behaviour is left
+     intact. */
+  BOOL PreloadAndConvert ();
+
   struct Hook *LoadHook;
   struct HTMLview_LoadMsg LoadMsg;
   Object *HTMLview;
