@@ -82,6 +82,15 @@ BOOL mSet (Object *obj, struct IClass *cl, struct opSet *msg)
         STRPTR input  = (STRPTR)ti_Data;
         ULONG  length = strlen(input);
 
+        /* The previously-clicked anchor's class= and url pointers
+           point into the OLD parsed tree, which we're about to
+           replace and destroy. Null them now so any GetAttr the
+           caller fires between this set and a subsequent click
+           hands back NULL rather than a dangling pointer. Same
+           reasoning for Target. */
+        data->LinkClass = NULL;
+        data->Target    = NULL;
+
         /* If the caller's content is UTF-8 (e.g., a Mastodon toot),
            convert to the system codeset before parsing. ConvertUTF8
            returns NULL for ASCII-only input or when codesets.library
