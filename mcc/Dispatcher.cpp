@@ -460,6 +460,7 @@ CPPDISPATCHER(_Dispatcher)
       delete cinfo->Img;
       delete cinfo->Frame;
       delete cinfo->Background;
+      delete cinfo->LinkClass;
 
       if(data->Flags & FLG_RootObj)
         delete data->Share;
@@ -1446,6 +1447,17 @@ CPPDISPATCHER(_Dispatcher)
         {
           delete *dst[i];
           *dst[i] = src[i] ? (STRPTR)DoMethod(frame, MUIM_HTMLview_AddPart, (ULONG)src[i]) : (STRPTR)NULL;
+        }
+
+        /* Class names aren't URLs, so don't push them through
+           MUIM_HTMLview_AddPart — just dup the bytes. */
+        delete cinfo->LinkClass;
+        cinfo->LinkClass = NULL;
+        if(hmsg->LinkClass)
+        {
+          ULONG len = strlen(hmsg->LinkClass);
+          cinfo->LinkClass = new (std::nothrow) char[len+1];
+          if(cinfo->LinkClass) strcpy(cinfo->LinkClass, hmsg->LinkClass);
         }
 
         if(hmsg->Img)

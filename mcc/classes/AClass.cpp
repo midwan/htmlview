@@ -30,14 +30,18 @@ BOOL AClass::HitTest (struct HitTestMessage &hmsg)
   if(URL)
   {
     class SuperClass *oldlink = hmsg.Obj;
+    STRPTR oldClass = hmsg.LinkClass;
+
     hmsg.Obj = this;
     hmsg.URL = URL;
     hmsg.Target = Target;
+    hmsg.LinkClass = Class;     /* may be NULL */
 
     if(TreeClass::HitTest(hmsg))
       return(TRUE);
 
     hmsg.Obj = oldlink;
+    hmsg.LinkClass = oldClass;
     return(FALSE);
   }
   else

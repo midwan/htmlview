@@ -282,6 +282,28 @@
 #define MUIA_HTMLview_ClickedURL          HTMLview_ID(15)
 
 /**
+  * Set alongside MUIA_HTMLview_ClickedURL whenever a clicked anchor
+  * carries an HTML class attribute (e.g. Mastodon's class="mention" /
+  * class="hashtag"). NULL when the click was on a link without a class
+  * or on something other than a link.
+  *
+  * NAME
+  *
+  * MUIA_HTMLview_LinkClass -- [..G], STRPTR
+  *
+  * FUNCTION
+  *
+  * Lets clients distinguish link types without resorting to URL-pattern
+  * matching. Borrowed pointer — copy if you need to retain it past the
+  * notification callback.
+  *
+  * SEE ALSO
+  *
+  * MUIA_HTMLview_ClickedURL, MUIA_HTMLview_Target
+  */
+#define MUIA_HTMLview_LinkClass           HTMLview_ID(60)
+
+/**
   * When a separate task is parsing a page, then this method will be called
   * approximately 5 times per second, with the number of parsed bytes as first
   * argument.
@@ -783,6 +805,11 @@ struct MUIR_HTMLview_GetContextInfo
   Object *FrameObj;
   ULONG ImageWidth, ImageHeight, ImageSize, ImageOffsetX, ImageOffsetY;
   STRPTR ImageAltText;
+  /* HTML class= of the linked anchor (e.g. Mastodon's "mention" /
+     "hashtag"), or NULL if the click wasn't on a class-bearing link.
+     Owned copy; freed automatically on the next GetContextInfo or
+     when the HTMLview is disposed. */
+  STRPTR LinkClass;
 };
 
 struct MUIP_HTMLview_GotoURL

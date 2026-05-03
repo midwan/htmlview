@@ -33,12 +33,16 @@ struct HitTestMessage
     Host = host;
     Img = NULL;
     ServerMap = FALSE;
+    LinkClass = NULL;
   }
 
   LONG X, Y;
   LONG OffsetX, OffsetY;
   BOOL ServerMap;
   STRPTR URL, Target, ImgSrc, Frame, Background;
+  /* HTML class= of the matched <a>, or NULL. Borrowed pointer; lives
+     on the parsed tree, not owned by the message. */
+  STRPTR LinkClass;
   Object *FrameObj;
   class SuperClass *Obj;
   class TreeClass *Host;
