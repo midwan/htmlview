@@ -276,7 +276,7 @@ Driven by observations from the amidon2 client.
 - Host-side unit test (`mcc/tests/test_bitmap_scaler.c`) pins the
   scaler's dimension-rounding rules without requiring graphics.library.
 - `SimpleTest` exercises the new behaviour: a "Mastodon avatar
-  scaling" section with the same `test.png` at four sizes plus a
+  scaling" section with the same `test.png` at five sizes plus a
   click hook that prints `url` + `class` for each anchor click.
 
 **Plan reference:** `docs/superpowers/plans/2026-05-03-htmlview-mastodon-fixes.md`
