@@ -241,14 +241,25 @@ successfully when the app persists it; not loading when the app doesn't.
 
 ---
 
-## Phase 12 — `target="_blank"` notification `[ ]`
+## Phase 12 — `target="_blank"` notification `[x]`
 
-**Goal.** Currently `MUIA_HTMLview_Target` is passive — hosts must parse
-target strings. Add a dedicated notify carrying URL + target so hosts can
-trivially open a new tab/window.
+**Resolved as documentation.** The mechanism already exists: `MUIA_HTMLview_Target`
+is set on the HTMLview alongside `MUIA_HTMLview_ClickedURL` for every
+click. Hosts that want to route `target="_blank"` to a new window can:
 
-**Touches.** `mcc/HTMLview_mcc.h` (new attr or method), `Dispatcher.cpp`,
-anchor handling.
+```c
+DoMethod(html, MUIM_Notify, MUIA_HTMLview_ClickedURL, MUIV_EveryTime,
+         app, 3, MUIM_CallHook, &hook, MUIV_TriggerValue);
+// inside the hook:
+STRPTR target = NULL;
+GetAttr(MUIA_HTMLview_Target, html, (ULONG *)&target);
+if(target && !strcmp(target, "_blank")) ...
+```
+
+`mcc/HTMLview_mcc.h`'s `MUIA_HTMLview_Target` autodoc now spells this
+pattern out, and `SimpleTest.c`'s click hook prints `target` alongside
+`url` and `class` so the contract is greppable in the demo log. No new
+attribute/method was needed.
 
 ---
 

@@ -34,15 +34,19 @@ static struct Hook ImageLoadHook;
 static Object *gHtml;
 
 /* Notification hook for MUIA_HTMLview_ClickedURL: prints the URL
-   passed via MUIV_TriggerValue plus the class= read out of the
-   HTMLview via GetAttr(MUIA_HTMLview_LinkClass). */
+   passed via MUIV_TriggerValue plus the target= and class= read out
+   of the HTMLview synchronously via GetAttr. */
 HOOKPROTONHNO(ClickHandler, void, STRPTR url)
 {
-    STRPTR linkClass = NULL;
+    STRPTR linkClass = NULL, target = NULL;
     if (gHtml)
+    {
         GetAttr(MUIA_HTMLview_LinkClass, gHtml, (ULONG *)&linkClass);
-    printf("CLICK url=\"%s\" class=\"%s\"\n",
-           url ? (char *)url : "(null)",
+        GetAttr(MUIA_HTMLview_Target,    gHtml, (ULONG *)&target);
+    }
+    printf("CLICK url=\"%s\" target=\"%s\" class=\"%s\"\n",
+           url       ? (char *)url       : "(null)",
+           target    ? (char *)target    : "(none)",
            linkClass ? (char *)linkClass : "(none)");
 }
 MakeStaticHook(ClickHookFn, ClickHandler);
@@ -156,7 +160,8 @@ static const char *test_html =
     "<h2>Mastodon-style links</h2>"
     "<p>Hello <a href=\"https://example.social/@user\" class=\"mention\">@user</a> and "
     "<a href=\"https://example.social/tags/foo\" class=\"hashtag\">#foo</a>. "
-    "Plain <a href=\"https://example.social/somewhere\">link</a> for comparison.</p>"
+    "Plain <a href=\"https://example.social/somewhere\">link</a> for comparison. "
+    "<a href=\"https://example.com/external\" target=\"_blank\">External (new window)</a>.</p>"
 
     "<p align=\"center\"><b>End of Test Suite</b></p>"
     "</body></html>";

@@ -330,8 +330,8 @@
 #define MUIM_HTMLview_LookupFrame         HTMLview_ID(20) /* Private */
 
 /**
-  * When following an anchor, then the HTMLview-object will set this tag to
-  * the target-part of the anchor-element.
+  * When following an anchor, the HTMLview-object will set this tag to
+  * the target-part of the anchor element.
   *
   * NAME
   *
@@ -339,12 +339,32 @@
   *
   * FUNCTION
   *
-  * When following an anchor, then the HTMLview-object will set this tag
-  * to the target-part of the anchor-element.
+  * Set alongside MUIA_HTMLview_ClickedURL on every click. Common
+  * targets:
+  *   "_blank"   open in a new window/tab
+  *   "_self"    replace current view (default)
+  *   "_top"     escape any frameset
+  *   "_parent"  navigate the parent frame
+  * arbitrary strings refer to named frames in a frameset.
+  *
+  * Recommended pattern for routing:
+  *
+  *   DoMethod(html, MUIM_Notify,
+  *            MUIA_HTMLview_ClickedURL, MUIV_EveryTime,
+  *            app, 3, MUIM_CallHook, &hook, MUIV_TriggerValue);
+  *
+  *   // inside the hook, read both URL and Target:
+  *   STRPTR target = NULL;
+  *   GetAttr(MUIA_HTMLview_Target, html, (ULONG *)&target);
+  *   if(target && !strcmp(target, "_blank")) ...
+  *
+  * Borrowed pointer; copy if you need to retain it past the hook
+  * callback.
   *
   * SEE ALSO
   *
-  * MUIA_HTMLview_ClickedURL, MUIA_HTMLview_Qualifier
+  * MUIA_HTMLview_ClickedURL, MUIA_HTMLview_LinkClass,
+  * MUIA_HTMLview_Qualifier
   */
 #define MUIA_HTMLview_Target              HTMLview_ID(21)
 
