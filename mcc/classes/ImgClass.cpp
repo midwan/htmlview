@@ -69,30 +69,60 @@ VOID ImgClass::BuildScaledBitmap (struct PictureFrame *pic)
   if(!pic || !pic->BMp || !GivenWidth || !GivenHeight)
     return;
 
+  /* Defer until the picture is fully decoded — scaling an empty or
+     half-populated bitmap would just snapshot whatever zeroes/garbage
+     the decoder hasn't filled in yet. The cache-hit path always
+     enters here with PicFLG_Full set; the streaming-decode path
+     reaches it on the final UpdateImage. */
+  if(!(pic->Flags & PicFLG_Full))
+    return;
+
   LONG reqW = GivenWidth->Size;
   LONG reqH = GivenHeight->Size;
 
   /* Skip when nothing to do (no HTML override, or it already matches
-     the picture's native size). The renderer falls through to the
-     cache-shared native bitmap in that case. */
+     the picture's native size, or the scaled copy is already current).
+     The renderer falls through to the cache-shared native bitmap
+     for the first two cases. */
   if(reqW <= 0 || reqH <= 0)
     return;
   if(reqW == (LONG)pic->Width && reqH == (LONG)pic->Height)
     return;
+  if(ScaledBMp && ScaledW == (UWORD)reqW && ScaledH == (UWORD)reqH)
+    return;
 
   FreeScaledBitmap();
 
+  /* Scale colour and mask atomically: if either fails on a picture
+     that has a mask, drop both and leave the renderer to fall back
+     to the native bitmap. Mixing a scaled BMp with a native-size
+     mask would produce undefined reads in BltMaskRPort. */
   ULONG depth = GetBitMapAttr(pic->BMp, BMA_DEPTH);
-  ScaledBMp = ScaleBitmapTo(pic->BMp,
-                            (UWORD)pic->Width, (UWORD)pic->Height,
-                            (UWORD)reqW, (UWORD)reqH,
-                            depth, pic->BMp);
+  struct BitMap *newBMp = ScaleBitmapTo(pic->BMp,
+                                         (UWORD)pic->Width, (UWORD)pic->Height,
+                                         (UWORD)reqW, (UWORD)reqH,
+                                         depth, pic->BMp);
+  if(!newBMp)
+    return;
+
+  UBYTE *newMask = NULL;
   if(pic->Mask)
-    ScaledMask = ScaleMaskTo(pic->Mask,
-                             (UWORD)pic->Width, (UWORD)pic->Height,
-                             (UWORD)reqW, (UWORD)reqH);
-  ScaledW = (UWORD)reqW;
-  ScaledH = (UWORD)reqH;
+  {
+    newMask = ScaleMaskTo(pic->Mask,
+                          (UWORD)pic->Width, (UWORD)pic->Height,
+                          (UWORD)reqW, (UWORD)reqH);
+    if(!newMask)
+    {
+      WaitBlit();
+      FreeBitMap(newBMp);
+      return;
+    }
+  }
+
+  ScaledBMp  = newBMp;
+  ScaledMask = newMask;
+  ScaledW    = (UWORD)reqW;
+  ScaledH    = (UWORD)reqH;
 }
 
 VOID ImgClass::FreeColours(struct ColorMap *cmap UNUSED)
@@ -437,9 +467,9 @@ BOOL ImgClass::ReceiveImage (struct PictureFrame *pic)
     relayout = TRUE;
   }
 
-  /* Build a per-instance scaled copy if the HTML asked for dimensions
-     that diverge from the picture's native size. No-op otherwise. */
-  BuildScaledBitmap(pic);
+  /* Scaling is built lazily on first Render — see BuildScaledBitmap.
+     Doing it here would snapshot the bitmap before the decoder has
+     finished populating it for the streaming path. */
 
   return(relayout);
 }
@@ -515,25 +545,29 @@ VOID ImgClass::Render (struct RenderMessage &rmsg)
   LONG x2 = x1+width-1, y2 = y1+height-1;
   if(Picture)
   {
-    /* Source selection: ScaledBMp/ScaledMask are populated when the
-       HTML asked for dimensions that diverge from the picture's
-       native size (see BuildScaledBitmap). When present, the source
-       extent matches the rendered (width x height) rectangle exactly,
-       so we override the YStart/YStop progressive-decode markers —
-       those are decoder-driven and only meaningful for the native
-       bitmap path. */
-    struct BitMap *srcBmp  = ScaledBMp  ? ScaledBMp  : Picture->BMp;
-    UBYTE         *srcMask = ScaledMask ? ScaledMask : Picture->Mask;
-    LONG src_y, pass_height;
+    /* Lazy-build the per-instance scaled copy if needed. Idempotent:
+       early-returns when the picture is incomplete, when no scaling
+       is asked for, or when the existing scaled copy already matches
+       the requested dimensions. */
+    BuildScaledBitmap(Picture);
+
+    /* Default source = the cache-shared native bitmap with the
+       progressive-decode YStart/YStop window. When a per-instance
+       scaled copy exists, override both: the scaled bitmap is always
+       complete and its extent matches the rendered rectangle. The
+       atomic-allocation path in BuildScaledBitmap guarantees that
+       ScaledBMp and ScaledMask are either both set (with matching
+       dimensions) or both NULL — never mixed with the native pair. */
+    struct BitMap *srcBmp  = Picture->BMp;
+    UBYTE         *srcMask = Picture->Mask;
+    LONG src_y       = YStart;
+    LONG pass_height = YStop-YStart;
     if(ScaledBMp)
     {
-      src_y = 0;
+      srcBmp      = ScaledBMp;
+      srcMask     = ScaledMask;
+      src_y       = 0;
       pass_height = height;
-    }
-    else
-    {
-      src_y = YStart;
-      pass_height = YStop-YStart;
     }
 
     if(srcMask)
