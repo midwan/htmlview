@@ -161,16 +161,18 @@ system with `webp.datatype` installed.
 
 ---
 
-## Phase 7 — Three long-standing known bugs `[ ]`
+## Phase 7 — Three long-standing known bugs `[~]`
 
 From `doc/MCC_HTMLview.readme`:
 
-1. **Text outside `<body>` is not shown.** HTML 4 does not require the
-   tag. Remove the gate in the parser. Touches `ParseMessage.cpp` /
-   `classes/BodyClass.cpp`.
-2. **Entities without trailing `;` are ignored.** Implement HTML5's
-   named-entity matching for the common set (`&amp`, `&nbsp`, `&copy`,
-   `&lt`, `&gt`). Touches `Entities.cpp`.
+1. **Text outside `<body>` is not shown.** `[x]` Done — HostClass now
+   uses `Body == this` as an implicit-body sentinel and dispatches
+   layout/render/hit-test through TreeClass when no `<body>` /
+   `<frameset>` is present in the document.
+2. **Entities without trailing `;` are ignored.** `[x]` Done — `TFind`
+   in `Entities.cpp` now does longest-prefix matching against the
+   ternary tree; any input that hits a terminal node returns its
+   payload regardless of what follows.
 3. **Floyd–Steinberg tile seams.** The dither currently leaks error
    across tile edges making backgrounds look striped. Clamp error
    distribution at tile boundaries. Touches `IM_Dither.cpp`.
