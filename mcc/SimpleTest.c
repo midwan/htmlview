@@ -152,6 +152,15 @@ static const char *test_html =
     "  <img src=\"PROGDIR:test.png\" alt=\"width-only 48\" width=\"48\">"
     "</p>"
 
+    "<h2>HTML5 inline elements</h2>"
+    "<p>"
+    "<span>SPAN inline (no styling).</span> "
+    "<ins>INS as underline.</ins> "
+    "<del>DEL as strikethrough.</del> "
+    "<mark>MARK plain (no highlight semantic).</mark> "
+    "<time datetime=\"2026-05-03\">TIME plain.</time>"
+    "</p>"
+
     "<h2>UTF-8 (codesets.library)</h2>"
     "<p>If codesets.library v6+ is installed, the bytes below were "
     "converted from UTF-8 to the system codeset before parsing — the "

@@ -55,6 +55,11 @@ struct TagInfo TagTable[] =
   { "CITE",       FLG_EndRequired,                      tag_CITE,         0 },
   { "CODE",       FLG_EndRequired,                      tag_CODE,         0 },
   { "DD",         FLG_NoGroupNesting | FLG_Blocklevel,  tag_DD,           group_Definition },
+  /* HTML5 inline aliases. INS/DEL get the underline/strikethrough
+     decoration of their HTML4 counterparts; SPAN/MARK/TIME pass
+     content through inline with no styling change (we don't have a
+     highlight semantic for MARK). */
+  { "DEL",        FLG_EndRequired,                      tag_S,            0 },
   { "DFN",        FLG_EndRequired,                      tag_DFN,          0 },
   { "DIR",        FLG_EndRequired | FLG_Blocklevel,     tag_DIR,          0 },
   { "DIV",        FLG_EndRequired | FLG_Blocklevel,     tag_DIV,          0 },
@@ -81,10 +86,12 @@ struct TagInfo TagTable[] =
   { "I",          FLG_EndRequired,                      tag_I,            0 },
   { "IMG",        FLG_Inline,                           tag_IMG,          0 },
   { "INPUT",      FLG_Inline,                           tag_INPUT,        0 },
+  { "INS",        FLG_EndRequired,                      tag_U,            0 },
   { "ISINDEX",    FLG_Inline,                           tag_ISINDEX,      0 },
   { "LI",         FLG_NoNesting,                        tag_LI,           0 },
   { "MAIN",       FLG_EndRequired | FLG_Blocklevel,     tag_DIV,          0 },
   { "MAP",        FLG_EndRequired,                      tag_MAP,          0 },
+  { "MARK",       FLG_EndRequired,                      tag_Unknown,      0 },
   { "MENU",       FLG_EndRequired | FLG_Blocklevel,     tag_MENU,         0 },
   { "META",       FLG_Inline,                           tag_META,         0 },
   { "NAV",        FLG_EndRequired | FLG_Blocklevel,     tag_DIV,          0 },
@@ -100,6 +107,7 @@ struct TagInfo TagTable[] =
   { "SECTION",    FLG_EndRequired | FLG_Blocklevel,     tag_DIV,          0 },
   { "SELECT",     FLG_EndRequired,                      tag_SELECT,       0 },
   { "SMALL",      FLG_EndRequired,                      tag_SMALL,        0 },
+  { "SPAN",       FLG_EndRequired,                      tag_Unknown,      0 },
   { "STRIKE",     FLG_EndRequired,                      tag_STRIKE,       0 },
   { "STRONG",     FLG_EndRequired,                      tag_STRONG,       0 },
   { "SUB",        FLG_EndRequired,                      tag_SUB,          0 },
@@ -108,6 +116,7 @@ struct TagInfo TagTable[] =
   { "TD",         FLG_NoGroupNesting | FLG_Blocklevel,  tag_TD,           group_Tablecell },
   { "TEXTAREA",   FLG_EndRequired,                      tag_TEXTAREA,     0 },
   { "TH",         FLG_NoGroupNesting | FLG_Blocklevel,  tag_TH,           group_Tablecell },
+  { "TIME",       FLG_EndRequired,                      tag_Unknown,      0 },
   { "TITLE",      FLG_EndRequired,                      tag_TITLE,        0 },
   { "TR",         FLG_NoNesting | FLG_Blocklevel,       tag_TR,           0 },
   { "TT",         FLG_EndRequired,                      tag_TT,           0 },
