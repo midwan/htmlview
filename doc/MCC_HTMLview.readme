@@ -31,17 +31,38 @@ Its main features are:
 KNOWN LIMITATIONS
 *****************
 
- * Text outside a <body>...</body> pair is not shown; pages without the
-   tag render blank. (Tracked in IMPROVEMENTS.md Phase 7.)
- * HTML entities without a trailing semicolon are not interpreted --
-   "&amp" is ignored; write "&amp;". (Tracked in Phase 7.)
  * The Floyd-Steinberg dither does not clamp error at tile boundaries,
-   so tiled backgrounds can show faint seams. (Tracked in Phase 7.)
+   so tiled backgrounds can show faint seams. Latent only — the legacy
+   decoder it lives in is unused by the current datatypes-based image
+   path. (Tracked in IMPROVEMENTS.md Phase 7.)
  * The datatype image-decoder fallback was historically reliable only
    with the Picasso96 picture.datatype; modern WebP/SVG/AVIF require a
    datatype path not yet wired in. (Tracked in Phase 6.)
- * UTF-8 pages render mojibake; the parser treats bytes as Latin-1.
-   A transliteration pass is in the roadmap (Phase 4).
+ * Multiple HTMLviews loading the same URL at the exact same instant
+   each spawn their own decoder thread; the cache wins on the second
+   visit but not on a true simultaneous race. To fully share work,
+   pass MUIA_HTMLview_SharedData when constructing sibling HTMLviews
+   (e.g. timeline + notification panes in a Mastodon client).
+
+RECENTLY FIXED
+**************
+
+ * Text outside <body> now renders. HTML 4/5 don't require the tag.
+ * HTML entities without a trailing semicolon are now interpreted via
+   longest-prefix match -- "&amp text" works.
+ * UTF-8 input (both via MUIA_HTMLview_Contents and URL loads) is
+   converted to the system codeset via codesets.library v6+ when the
+   library is installed. Falls back to passthrough otherwise.
+ * <img width=W height=H> now scales the rendered bitmap (was clipped).
+ * Single-axis sizing (e.g. <img width=64> with no height) now derives
+   the missing dimension from the source's aspect ratio.
+ * <a class="..."> is preserved through parsing and exposed via
+   MUIA_HTMLview_LinkClass on click.
+ * HTML5 block elements (article, section, header, footer, nav, aside,
+   main, figure, figcaption) and inline elements (span, ins, del,
+   mark, time) are recognised.
+ * Cross-HTMLview cache reuse via MUIA_HTMLview_SharedData (now
+   public) -- siblings share the image cache and decode queue.
 
 LEGALESE
 ********
