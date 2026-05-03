@@ -115,6 +115,22 @@ static const char *test_html =
     "<h2>Entities</h2>"
     "<p>&copy; &reg; &trade; &lt; &gt; &amp; &larr; &rarr;</p>"
 
+    "<h2>Mastodon avatar scaling</h2>"
+    "<p>Same PROGDIR:test.png at four sizes. The scaled cells must "
+    "render at the requested width x height, not clipped.</p>"
+    "<p>"
+    "  <img src=\"PROGDIR:test.png\" alt=\"native\">"
+    "  <img src=\"PROGDIR:test.png\" alt=\"64x64\" width=\"64\" height=\"64\">"
+    "  <img src=\"PROGDIR:test.png\" alt=\"32x32 #1\" width=\"32\" height=\"32\">"
+    "  <img src=\"PROGDIR:test.png\" alt=\"32x32 #2\" width=\"32\" height=\"32\">"
+    "  <img src=\"PROGDIR:test.png\" alt=\"96x32\" width=\"96\" height=\"32\">"
+    "</p>"
+
+    "<h2>Mastodon-style links</h2>"
+    "<p>Hello <a href=\"https://example.social/@user\" class=\"mention\">@user</a> and "
+    "<a href=\"https://example.social/tags/foo\" class=\"hashtag\">#foo</a>. "
+    "Plain <a href=\"https://example.social/somewhere\">link</a> for comparison.</p>"
+
     "<p align=\"center\"><b>End of Test Suite</b></p>"
     "</body></html>";
 

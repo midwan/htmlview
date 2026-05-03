@@ -477,7 +477,7 @@ CATALOGS = $(LOCALE)/deutsch.catalog
 #
 
 # Build test programs for all platforms
-all: $(BINDIR) $(OBJDIR) $(MCCTARGET) $(NETHOOKLIB) $(SIMPLETARGET) $(LIBLOADTARGET) $(RAPAGUITARGET) $(BINDIR)/test.png
+all: $(BINDIR) $(OBJDIR) $(MCCTARGET) $(NETHOOKLIB) $(SIMPLETARGET) $(LIBLOADTARGET) $(RAPAGUITARGET) $(BINDIR)/test.png $(BINDIR)/mastodon_avatar.html
 
 # make the object directories
 $(OBJDIR):
@@ -580,6 +580,11 @@ $(MCCTARGET) : $(MCCOBJS)
 $(BINDIR)/test.png: testdata/test.png | $(BINDIR)
 	@echo "  CP    $@"
 	@cp testdata/test.png $@
+
+# Mastodon-shaped fixture exercising <img width/height> + <a class>.
+$(BINDIR)/mastodon_avatar.html: testdata/mastodon_avatar.html | $(BINDIR)
+	@echo "  CP    $@"
+	@cp testdata/mastodon_avatar.html $@
 
 $(OBJDIR)/library.o: library.c ../include/mccinit.c \
   HTMLview_mcc.h private.h rev.h
