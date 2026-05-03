@@ -81,11 +81,14 @@ extern "C" STRPTR ConvertUTF8(CONST_STRPTR src, ULONG srcLen)
   if(!HasNonASCII(src, srcLen))
     return NULL;
 
-  /* CodesetsIsValidUTF8 expects a NUL-terminated string. The caller
-     hands us a buffer of known length, but in practice MUIA_HTMLview_
-     Contents passes a C string, so it's fine. */
-  if(!CodesetsIsValidUTF8((CONST_STRPTR)src))
-    return NULL;
+  /* Skip CodesetsIsValidUTF8 — v6.22 was observed rejecting
+     plainly-valid UTF-8 input (e.g. a 5.9 KB ASCII page with a
+     handful of well-formed two-byte Latin-1 codepoints). The
+     converter itself handles malformed sequences gracefully when
+     CSA_MapForeignChars is set: invalid bytes get substituted
+     rather than aborting the whole conversion, so dropping the
+     pre-check costs us nothing on bad input and unblocks valid
+     input. */
 
   ULONG dstLen = 0;
   /* Use the *A (tag-list) form — the varargs wrapper isn't generated
