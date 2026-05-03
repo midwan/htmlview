@@ -718,7 +718,47 @@
   */
 #define MUIM_HTMLview_FlushImage          HTMLview_ID(50)
 
-#define MUIA_HTMLview_SharedData          HTMLview_ID(51) /* Private */
+/**
+  * Pass an existing HTMLview's internal shared-data pointer when
+  * creating a sibling HTMLview so the two share an image cache and
+  * decode queue.
+  *
+  * NAME
+  *
+  * MUIA_HTMLview_SharedData -- [I.G], APTR
+  *
+  * FUNCTION
+  *
+  * Originally introduced for framesets (each <frame> child sharing
+  * the parent frameset's cache). Also useful for hosting two or
+  * more independent HTMLviews in one application — e.g. a Mastodon
+  * client with separate timeline and notification panes that want
+  * to share avatar/thumbnail downloads.
+  *
+  * EXAMPLE
+  *
+  *   APTR shared = NULL;
+  *   timeline_view = MUI_NewObject("HTMLview.mcc",
+  *       MUIA_HTMLview_ImageLoadHook, (ULONG)&hook,
+  *       TAG_DONE);
+  *   GetAttr(MUIA_HTMLview_SharedData, timeline_view, (ULONG *)&shared);
+  *   notify_view = MUI_NewObject("HTMLview.mcc",
+  *       MUIA_HTMLview_ImageLoadHook, (ULONG)&hook,
+  *       MUIA_HTMLview_SharedData,    (ULONG)shared,
+  *       TAG_DONE);
+  *
+  * Both panes now hit the same ImageCache: a fetch by either pane
+  * populates the cache; the other pane gets a cache hit on next
+  * Layout. ImageCache::AddImage rejects duplicate URLs and
+  * DecodeImage cache-hit-short-circuits, so even if both panes
+  * parse the same content at roughly the same time the cost
+  * collapses to one fetch + one decode.
+  *
+  * SEE ALSO
+  *
+  * MUIA_HTMLview_ImagesInDecodeQueue, MUIM_HTMLview_FlushImage
+  */
+#define MUIA_HTMLview_SharedData          HTMLview_ID(51)
 #define MUIM_HTMLview_ServerRequest       HTMLview_ID(52) /* Private */
 
 /**

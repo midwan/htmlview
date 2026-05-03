@@ -277,6 +277,12 @@ ULONG mGet (Object *obj, struct IClass *cl, struct opGet *msg)
       ti_Data = (ULONG)data->LinkClass;
     break;
 
+    case MUIA_HTMLview_SharedData:
+      /* Exposed so apps can wire two HTMLviews to one image cache —
+         see the autodoc on this attribute in HTMLview_mcc.h. */
+      ti_Data = (ULONG)data->Share;
+    break;
+
     case MUIA_HTMLview_FrameName:
       ti_Data = (ULONG)data->FrameName;
     break;
