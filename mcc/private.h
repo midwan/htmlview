@@ -144,6 +144,11 @@ struct HTMLviewData
 
   STRPTR FrameName; /* The name of this frame */
   STRPTR Target;    /* Temporary target name */
+  /* Class= of the most recently clicked anchor, or NULL. Borrowed
+     from the parsed tree. Set just before MUIA_HTMLview_ClickedURL
+     fires its notification so the listener's hook can Get this
+     attribute synchronously. */
+  STRPTR LinkClass;
 
   STRPTR PostData;    /* These fields are set by MUIM_HTMLview_Post, */
   STRPTR EncodingType;  /* and read by MUIM_HTMLview_StartParser */

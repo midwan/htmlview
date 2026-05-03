@@ -133,6 +133,14 @@ BOOL mSet (Object *obj, struct IClass *cl, struct opSet *msg)
         data->Target = (STRPTR)ti_Data;
       break;
 
+      case MUIA_HTMLview_LinkClass:
+        /* Set just before MUIA_HTMLview_ClickedURL fires the
+           notification; readers Get this attr inside their hook to
+           pick up the class. Pointer is borrowed from the parsed
+           tree — caller must consume it before returning. */
+        data->LinkClass = (STRPTR)ti_Data;
+      break;
+
       case MUIA_Group_Forward:
         forward = (BOOL)ti_Data;
       break;
@@ -242,6 +250,10 @@ ULONG mGet (Object *obj, struct IClass *cl, struct opGet *msg)
 
     case MUIA_HTMLview_Target:
       ti_Data = (ULONG)data->Target;
+    break;
+
+    case MUIA_HTMLview_LinkClass:
+      ti_Data = (ULONG)data->LinkClass;
     break;
 
     case MUIA_HTMLview_FrameName:

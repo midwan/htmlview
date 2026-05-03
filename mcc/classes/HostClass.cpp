@@ -295,7 +295,7 @@ ULONG HostClass::HandleEvent (Object *obj, struct IClass *cl UNUSED, struct MUIP
       LONG y = imsg->MouseY - _mtop(obj);
 
       BOOL map = FALSE;
-      STRPTR url = NULL, link = NULL, target = NULL;
+      STRPTR url = NULL, link = NULL, target = NULL, linkClass = NULL;
       class SuperClass *linkobj;
       if(x >= 0 && y >= 0 && x < (LONG)data->Width && y < (LONG)data->Height)
       {
@@ -304,6 +304,7 @@ ULONG HostClass::HandleEvent (Object *obj, struct IClass *cl UNUSED, struct MUIP
         {
           link = hmsg.URL;
           target = FindTarget(obj, hmsg.Target, data);
+          linkClass = hmsg.LinkClass;
 
           linkobj = hmsg.Obj;
           url = (STRPTR)DoMethod(obj, MUIM_HTMLview_AddPart, (ULONG)link);
@@ -363,7 +364,10 @@ ULONG HostClass::HandleEvent (Object *obj, struct IClass *cl UNUSED, struct MUIP
               if(data->ActiveURLObj)
                 RedrawLink(obj, data->ActiveURLObj, data);
 
+              /* Set LinkClass before ClickedURL so a notify hook on
+                 ClickedURL can immediately Get LinkClass. */
               SetAttrs(dst,
+                MUIA_HTMLview_LinkClass,  (ULONG)linkClass,
                 MUIA_HTMLview_ClickedURL, (ULONG)url,
                 MUIA_HTMLview_Target,     (ULONG)target,
                 MUIA_HTMLview_Qualifier,  imsg->Qualifier,
