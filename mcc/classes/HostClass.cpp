@@ -107,7 +107,13 @@ struct FindMessage *HostClass::Find (STRPTR str, ULONG top, ULONG flags)
 
 Object *HostClass::LookupFrame (STRPTR name, class HostClass *hclass UNUSED)
 {
-  return(Body ? Body->LookupFrame(name, this) : NULL);
+  /* No-op when Body == this: a body-less document by definition has
+     no <frame> elements (frames live inside <frameset>, which would
+     have made FindBody match). Avoids infinite recursion through
+     HostClass::LookupFrame. */
+  if(Body && Body != this)
+    return(Body->LookupFrame(name, this));
+  return(NULL);
 }
 
 ULONG HostClass::HandleEvent (Object *obj, struct IClass *cl UNUSED, struct MUIP_HandleEvent *emsg)
@@ -436,26 +442,35 @@ ULONG HostClass::HandleEvent (Object *obj, struct IClass *cl UNUSED, struct MUIP
 BOOL HostClass::HitTest (struct HitTestMessage &hmsg)
 {
   BOOL result = FALSE;
-  if(Body)
+  if(Body == this)
+  {
+    result = TreeClass::HitTest(hmsg);
+  }
+  else if(Body)
   {
     result = Body->HitTest(hmsg);
-    if(!hmsg.Target)
-      hmsg.Target = (Base && Base->Target) ? Base->Target : Data->FrameName;
   }
+  if(result && !hmsg.Target)
+    hmsg.Target = (Base && Base->Target) ? Base->Target : Data->FrameName;
   return(result);
 }
 
 BOOL HostClass::Layout (struct LayoutMessage &lmsg)
 {
-  if(Body)
+  if(!Body)
   {
-    Body->Layout(lmsg);
+    /* Pin Body to the matched <body>/<frameset>, or to ourselves
+       (the implicit-body sentinel) when no such tag is in the
+       document. HTML 4 / HTML5 don't require <body>; previous
+       behaviour was to render nothing in that case. */
+    if(!(Body = FindBody(FirstChild)))
+      Body = this;
   }
+
+  if(Body == this)
+    TreeClass::Layout(lmsg);
   else
-  {
-    if((Body = FindBody(FirstChild)))
-      Layout(lmsg);
-  }
+    Body->Layout(lmsg);
 
   return TRUE;
 }

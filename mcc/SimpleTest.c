@@ -145,6 +145,11 @@ static const char *test_html =
     "  <img src=\"PROGDIR:test.png\" alt=\"width-only 48\" width=\"48\">"
     "</p>"
 
+    "<h2>Body-less rendering</h2>"
+    "<p>The fragment below has no &lt;body&gt; tag — its content "
+    "should still render. (Tested via the full document above; this "
+    "section just documents the expected behaviour.)</p>"
+
     "<h2>Mastodon-style links</h2>"
     "<p>Hello <a href=\"https://example.social/@user\" class=\"mention\">@user</a> and "
     "<a href=\"https://example.social/tags/foo\" class=\"hashtag\">#foo</a>. "

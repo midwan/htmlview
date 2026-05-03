@@ -35,15 +35,50 @@ class HostClass : public TreeClass
       FindMsg.MarkMsg = &MarkMsg;
       Obj = obj;
       Data = data;
+      /* HostClass is created directly (not through Classes::createInstance),
+         so setId() is never called on it — explicitly clear ID so
+         Body->id() comparisons are well-defined when Body == this
+         (the implicit-body sentinel). */
+      setId(0);
     }
     ~HostClass ();
     BOOL Layout (struct LayoutMessage &lmsg);
-    VOID Relayout (BOOL all)              { if(Body) Body->Relayout(all); }
-    VOID GetImages (struct GetImagesMessage &gmsg) { if(Body) Body->GetImages(gmsg); }
-    VOID Render (struct RenderMessage &rmsg)    { if(Body) Body->Render(rmsg); }
-    VOID AllocateColours (struct ColorMap *cmap)  { if(Body) Body->AllocateColours(cmap); }
-    VOID FreeColours (struct ColorMap *cmap)    { if(Body) Body->FreeColours(cmap); }
-    class AClass *FindAnchor (STRPTR name)      { if(Body) return(Body->FindAnchor(name)); else return(NULL); }
+
+    /* Body == this is the "no explicit <body>/<frameset>" sentinel —
+       use the host's own children as the implicit body. The methods
+       below dispatch via TreeClass::Foo() in that case to avoid
+       recursing back into HostClass::Foo(). */
+    VOID Relayout (BOOL all)
+    {
+      if(Body == this)        TreeClass::Relayout(all);
+      else if(Body)           Body->Relayout(all);
+    }
+    VOID GetImages (struct GetImagesMessage &gmsg)
+    {
+      if(Body == this)        TreeClass::GetImages(gmsg);
+      else if(Body)           Body->GetImages(gmsg);
+    }
+    VOID Render (struct RenderMessage &rmsg)
+    {
+      if(Body == this)        TreeClass::Render(rmsg);
+      else if(Body)           Body->Render(rmsg);
+    }
+    VOID AllocateColours (struct ColorMap *cmap)
+    {
+      if(Body == this)        TreeClass::AllocateColours(cmap);
+      else if(Body)           Body->AllocateColours(cmap);
+    }
+    VOID FreeColours (struct ColorMap *cmap)
+    {
+      if(Body == this)        TreeClass::FreeColours(cmap);
+      else if(Body)           Body->FreeColours(cmap);
+    }
+    class AClass *FindAnchor (STRPTR name)
+    {
+      if(Body == this)        return(TreeClass::FindAnchor(name));
+      else if(Body)           return(Body->FindAnchor(name));
+      else                    return(NULL);
+    }
     Object *LookupFrame (STRPTR name, class HostClass *hclass);
     ULONG HandleEvent (Object *obj, struct IClass *cl, struct MUIP_HandleEvent *emsg);
     BOOL HitTest (struct HitTestMessage &hmsg);
