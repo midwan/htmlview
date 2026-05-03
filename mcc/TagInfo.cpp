@@ -36,6 +36,15 @@ struct TagInfo TagTable[] =
   { "A",          FLG_EndRequired,                      tag_A,            0 },
   { "ADDRESS",    FLG_EndRequired,                      tag_ADDRESS,      0 },
   { "AREA",       FLG_Inline,                           tag_AREA,         0 },
+  /* HTML5 block-level aliases. Re-using tag_DIV gives them DIV's
+     "line break + plain content" rendering. setting up dedicated
+     classes would only matter once we implement default styles for
+     these elements (e.g., MAIN's typical max-width, FIGURE's centred
+     caption). For now they parse and render as a paragraph break,
+     which is what Mastodon and most modern HTML callers expect from
+     an Amiga-class renderer. */
+  { "ARTICLE",    FLG_EndRequired | FLG_Blocklevel,     tag_DIV,          0 },
+  { "ASIDE",      FLG_EndRequired | FLG_Blocklevel,     tag_DIV,          0 },
   { "B",          FLG_EndRequired,                      tag_B,            0 },
   { "BASE",       FLG_Inline,                           tag_BASE,         0 },
   { "BIG",        FLG_EndRequired,                      tag_BIG,          0 },
@@ -52,7 +61,10 @@ struct TagInfo TagTable[] =
   { "DL",         FLG_EndRequired | FLG_Blocklevel,     tag_DL,           0 },
   { "DT",         FLG_NoGroupNesting,                   tag_DT,           group_Definition },
   { "EM",         FLG_EndRequired,                      tag_EM,           0 },
+  { "FIGCAPTION", FLG_EndRequired | FLG_Blocklevel,     tag_DIV,          0 },
+  { "FIGURE",     FLG_EndRequired | FLG_Blocklevel,     tag_DIV,          0 },
   { "FONT",       FLG_EndRequired,                      tag_FONT,         0 },
+  { "FOOTER",     FLG_EndRequired | FLG_Blocklevel,     tag_DIV,          0 },
   { "FORM",       FLG_EndRequired,                      tag_FORM,         0 },
   { "FRAME",      FLG_Inline,                           tag_FRAME,        0 },
   { "FRAMESET",   FLG_EndRequired,                      tag_FRAMESET,     0 },
@@ -63,6 +75,7 @@ struct TagInfo TagTable[] =
   { "H5",         FLG_EndRequired | FLG_Blocklevel,     tag_H5,           0 },
   { "H6",         FLG_EndRequired | FLG_Blocklevel,     tag_H6,           0 },
   { "HEAD",       0L,                                   tag_HEAD,         0 },
+  { "HEADER",     FLG_EndRequired | FLG_Blocklevel,     tag_DIV,          0 },
   { "HR",         FLG_Inline,                           tag_HR,           0 },
   { "HTML",       0L,                                   tag_HTML,         0 },
   { "I",          FLG_EndRequired,                      tag_I,            0 },
@@ -70,9 +83,11 @@ struct TagInfo TagTable[] =
   { "INPUT",      FLG_Inline,                           tag_INPUT,        0 },
   { "ISINDEX",    FLG_Inline,                           tag_ISINDEX,      0 },
   { "LI",         FLG_NoNesting,                        tag_LI,           0 },
+  { "MAIN",       FLG_EndRequired | FLG_Blocklevel,     tag_DIV,          0 },
   { "MAP",        FLG_EndRequired,                      tag_MAP,          0 },
   { "MENU",       FLG_EndRequired | FLG_Blocklevel,     tag_MENU,         0 },
   { "META",       FLG_Inline,                           tag_META,         0 },
+  { "NAV",        FLG_EndRequired | FLG_Blocklevel,     tag_DIV,          0 },
   { "NOFRAMES",   FLG_EndRequired,                      tag_NOFRAMES,     0 },
   { "OL",         FLG_EndRequired | FLG_Blocklevel,     tag_OL,           0 },
   { "OPTION",     FLG_NoNesting,                        tag_OPTION,       0 },
@@ -82,6 +97,7 @@ struct TagInfo TagTable[] =
   { "S",          FLG_EndRequired,                      tag_S,            0 },
   { "SAMP",       FLG_EndRequired,                      tag_SAMP,         0 },
   { "SCRIPT",     FLG_EndRequired,                      tag_SCRIPT,       0 },
+  { "SECTION",    FLG_EndRequired | FLG_Blocklevel,     tag_DIV,          0 },
   { "SELECT",     FLG_EndRequired,                      tag_SELECT,       0 },
   { "SMALL",      FLG_EndRequired,                      tag_SMALL,        0 },
   { "STRIKE",     FLG_EndRequired,                      tag_STRIKE,       0 },
