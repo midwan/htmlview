@@ -349,6 +349,7 @@ MCCOBJS = \
           $(OBJDIR)/classes/ULClass.o \
           $(OBJDIR)/AllocateColours.o \
           $(OBJDIR)/Animation.o \
+          $(OBJDIR)/BitmapScaler.o \
           $(OBJDIR)/Classes.o \
           $(OBJDIR)/Colours.o \
           $(OBJDIR)/Config.o \
@@ -427,6 +428,7 @@ TESTOBJS= $(OBJDIR)/library_cpp.o \
           $(OBJDIR)/classes/ULClass.o \
           $(OBJDIR)/AllocateColours.o \
           $(OBJDIR)/Animation.o \
+          $(OBJDIR)/BitmapScaler.o \
           $(OBJDIR)/Classes.o \
           $(OBJDIR)/Colours.o \
           $(OBJDIR)/Config.o \
