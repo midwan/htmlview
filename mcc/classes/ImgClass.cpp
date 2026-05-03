@@ -66,7 +66,13 @@ VOID ImgClass::GetImages (struct GetImagesMessage &gmsg)
   {
     STRPTR url;
     if((url = (STRPTR)DoMethod(gmsg.HTMLview, MUIM_HTMLview_AddPart, (ULONG)Source)))
-      gmsg.AddImage(url, Width(0), Height(0), this);
+    {
+      /* Cache and in-flight queue dedupe by URL only — the per-instance
+         scaled bitmap (built in ReceiveImage) handles divergent
+         width/height. Two <img> tags pointing at the same src thus
+         share one network fetch and one decode regardless of size. */
+      gmsg.AddImage(url, 0, 0, this);
+    }
   }
 }
 
@@ -199,11 +205,15 @@ BOOL ImgClass::Layout (struct LayoutMessage &lmsg)
   STRPTR url;
   if(!Picture && Source && (url = (STRPTR)DoMethod(lmsg.HTMLview, MUIM_HTMLview_AddPart, (ULONG)Source)))
   {
-    if((Picture = lmsg.Share->ImageStorage->FindImage(url, GivenWidth ? width : 0, GivenHeight ? height : 0)))
+    /* URL-only lookup: ImgClass owns scaling, so the cache entry is
+       always the native-sized picture shared across instances. */
+    if((Picture = lmsg.Share->ImageStorage->FindImage(url, 0, 0)))
     {
       ReceiveImage(Picture);
-      width = Picture->Width;
-      height = Picture->Height;
+      /* Width()/Height() return the HTML-requested dims if set, else
+         the native size that ReceiveImage just stamped in. */
+      width  = Width(80, &lmsg);
+      height = Height(20, &lmsg);
       UpdateImage(0, height, 0, 0, TRUE);
 
       if(Picture->Next)
@@ -299,10 +309,11 @@ VOID ImgClass::MinMax (struct MinMaxMessage &mmsg)
   STRPTR url;
   if(!Picture && Source && (url = (STRPTR)DoMethod(lmsg->HTMLview, MUIM_HTMLview_AddPart, (ULONG)Source)))
   {
-    if((Picture = lmsg->Share->ImageStorage->FindImage(url, GivenWidth ? width : 0, Height(0, lmsg))))
+    /* URL-only lookup; see Layout() above for rationale. */
+    if((Picture = lmsg->Share->ImageStorage->FindImage(url, 0, 0)))
     {
       ReceiveImage(Picture);
-      width = Picture->Width;
+      width = Width(80, lmsg);
       UpdateImage(0, Picture->Height, 0, 0, TRUE);
 
       if(Picture->Next)
