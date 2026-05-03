@@ -132,6 +132,25 @@ ImageCache::~ImageCache ()
 VOID ImageCache::AddImage (STRPTR url, struct PictureFrame *pic)
 {
   ObtainSemaphore(&ImageMutex);
+
+  /* Race guard: if two decoder threads finish for the same URL at
+     roughly the same time (only possible across HTMLviews that share
+     a SharedData and both started before the first completed), keep
+     the first entry. Don't double-cache the same URL — FindImage's
+     first-match-wins behaviour would orphan the second entry until
+     LRU got around to it. The losing decoder's PictureFrame is
+     released by its caller's UnLockPicture(). */
+  for(struct ImageCacheItem *p = FirstEntry; p; p = p->Next)
+  {
+    if(!strcmp(url, p->URL))
+    {
+      D(DBF_STARTUP, "ImageCache: SKIP %s (already cached, %lux%lu)",
+        url, (ULONG)p->Picture->Width, (ULONG)p->Picture->Height);
+      ReleaseSemaphore(&ImageMutex);
+      return;
+    }
+  }
+
   struct ImageCacheItem *item = new (std::nothrow) struct ImageCacheItem (url, pic);
   if (item)
   {
@@ -746,10 +765,57 @@ extern "C" void DecoderThread(void)
   }
 }
 
+/* Walk an ImageList's Objects and feed each one a ready-to-use
+   PictureFrame (for cache-hit short-circuit). Returns TRUE if any
+   receiver asked for a relayout. */
+static BOOL DispatchCachedImage (struct ImageList *image, struct PictureFrame *pic)
+{
+  BOOL relayout = FALSE;
+  for(struct ObjectList *first = image->Objects; first; first = first->Next)
+  {
+    if(first->Obj->ReceiveImage(pic))
+      relayout = TRUE;
+  }
+  return relayout;
+}
+
 VOID DecodeImage (Object *obj, UNUSED struct IClass *cl, struct ImageList *image, struct HTMLviewData *data)
 {
+  if(!image)
+    return;
+
+  /* Cache-hit short-circuit: by the time the parser hands LoadImages
+     this list, another HTMLview sharing our SharedData (or even our
+     own previous parse pass) may have already populated the cache
+     for this URL. Walk the receivers, fire ReceiveImage on each,
+     and skip spawning a decoder thread entirely.
+
+     ImgClass::Layout already self-checks the cache when it lays out
+     each <img>, so this is mostly an optimisation against the race
+     window between parse-time gmsg.AddImage and layout-time
+     FindImage. It also covers the case where two HTMLviews finish
+     parsing at almost the same time and both reach LoadImages
+     before either has run a Layout pass. */
+  struct PictureFrame *cached = data->Share->ImageStorage->FindImage(image->ImageName);
+  if(cached)
+  {
+    BOOL needRelayout = DispatchCachedImage(image, cached);
+    if(needRelayout && data->HostObject)
+    {
+      data->Flags |= FLG_NotResized;
+      if(DoMethod(obj, MUIM_Group_InitChange))
+      {
+        data->LayoutMsg.Reset(data->Width, data->Height);
+        data->HostObject->Relayout(TRUE);
+        DoMethod(obj, MUIM_Group_ExitChange);
+      }
+      data->Flags &= ~FLG_NotResized;
+    }
+    return;
+  }
+
   LONG sigbit = 0;
-  if(image && (sigbit = AllocSignal(-1)) > 0)
+  if((sigbit = AllocSignal(-1)) > 0)
   {
     STRPTR name = NULL;
     struct List *pscrs = LockPubScreenList();

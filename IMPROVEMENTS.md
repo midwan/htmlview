@@ -301,6 +301,20 @@ Driven by observations from the amidon2 client.
 
 **Plan reference:** `docs/superpowers/plans/2026-05-03-htmlview-mastodon-fixes.md`
 
+**Cross-HTMLview fetch dedup (partial).** When multiple HTMLview
+instances share a `SharedData` (the existing — but currently
+private — `MUIA_HTMLview_SharedData` attribute), `DecodeImage` now
+short-circuits on a cache hit so the second pane doesn't spawn a
+redundant decoder thread. `ImageCache::AddImage` also rejects
+duplicate URL inserts so a race that *did* fire two threads can't
+leave two cache entries pointing at the same URL. **Still open:**
+true in-flight coalescing (HTMLview A starts a decode for URL X;
+HTMLview B's `DecodeImage` should attach to A's existing DecodeItem
+rather than starting its own thread). That requires `DecodeItem` to
+support multiple receiver chains and is deferred — the cache-hit
+short-circuit closes the common case where the cache settled
+before the second pane parsed.
+
 **Known follow-up.** The CGFX alpha-blend path in `ImgClass::Render`
 (the `FLG_Img_CreateAlpha` branch around `BlendBitMap`) is currently
 unreachable: nothing in the tree allocates a `Picture->AlphaMask`,
