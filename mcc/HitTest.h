@@ -33,7 +33,16 @@ struct HitTestMessage
     Host = host;
     Img = NULL;
     ServerMap = FALSE;
+    /* Zero-init the link-state fields so AClass::HitTest can rely on
+       save-and-restore without restoring uninitialised reads when a
+       link sibling misses ahead of a non-link sibling that hits. */
+    URL = NULL;
+    Target = NULL;
     LinkClass = NULL;
+    ImgSrc = NULL;
+    Frame = NULL;
+    Background = NULL;
+    FrameObj = NULL;
   }
 
   LONG X, Y;

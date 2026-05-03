@@ -29,19 +29,28 @@ BOOL AClass::HitTest (struct HitTestMessage &hmsg)
 {
   if(URL)
   {
-    class SuperClass *oldlink = hmsg.Obj;
+    /* Save and restore the full link triple on miss so a non-link
+       sibling that hits *after* this AClass doesn't end up with our
+       URL/Target/Class leaked into the message. The HitTestMessage
+       constructor zero-inits these, so the restore is well-defined
+       even at the top of the tree. */
+    class SuperClass *oldObj = hmsg.Obj;
+    STRPTR oldURL       = hmsg.URL;
+    STRPTR oldTarget    = hmsg.Target;
+    STRPTR oldLinkClass = hmsg.LinkClass;
+
     hmsg.Obj = this;
     hmsg.URL = URL;
     hmsg.Target = Target;
     hmsg.LinkClass = Class;     /* may be NULL */
 
-    /* Like URL/Target, LinkClass is left set on miss — the dispatcher
-       null-resets the relevant fields when the overall HitTest returns
-       FALSE, see Dispatcher.cpp::MUIM_HTMLview_GetContextInfo. */
     if(TreeClass::HitTest(hmsg))
       return(TRUE);
 
-    hmsg.Obj = oldlink;
+    hmsg.Obj = oldObj;
+    hmsg.URL = oldURL;
+    hmsg.Target = oldTarget;
+    hmsg.LinkClass = oldLinkClass;
     return(FALSE);
   }
   else

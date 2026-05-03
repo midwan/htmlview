@@ -281,6 +281,15 @@ Driven by observations from the amidon2 client.
 
 **Plan reference:** `docs/superpowers/plans/2026-05-03-htmlview-mastodon-fixes.md`
 
+**Known follow-up.** The CGFX alpha-blend path in `ImgClass::Render`
+(the `FLG_Img_CreateAlpha` branch around `BlendBitMap`) reads from
+`Picture->BMp`/`Picture->AlphaMask` at native size while writing into
+`BlendBitMap` at the requested size — pre-existing bug, but now newly
+reachable for Mastodon avatars (alpha-PNG arriving sized). For now the
+1-bit mask path covers the common case; a future patch should either
+skip alpha-blending when scaling is in play or scale the alpha plane
+through the same `BitmapScaler` API.
+
 ---
 
 ## Phase 13 — Modernize docs `[x]`

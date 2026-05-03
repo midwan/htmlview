@@ -133,7 +133,7 @@ static const char *test_html =
     "<p>&copy; &reg; &trade; &lt; &gt; &amp; &larr; &rarr;</p>"
 
     "<h2>Mastodon avatar scaling</h2>"
-    "<p>Same PROGDIR:test.png at four sizes. The scaled cells must "
+    "<p>Same PROGDIR:test.png at five sizes. The scaled cells must "
     "render at the requested width x height, not clipped.</p>"
     "<p>"
     "  <img src=\"PROGDIR:test.png\" alt=\"native\">"

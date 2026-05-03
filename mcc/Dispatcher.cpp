@@ -1435,11 +1435,11 @@ CPPDISPATCHER(_Dispatcher)
         LONG x = cmsg->X-_mleft(obj), y = cmsg->Y-_mtop(obj);
         struct HitTestMessage *hmsg = new (std::nothrow) struct HitTestMessage(x + data->Left, y + data->Top, host);
         if (!hmsg) return 0;
-        if(!host->HitTest(*hmsg))
-        {
-          hmsg->URL = NULL;
-          hmsg->LinkClass = NULL;
-        }
+        /* AClass::HitTest now save-and-restores URL/Target/LinkClass
+           on miss (and the HitTestMessage ctor zero-inits them), so
+           on overall miss those fields are already NULL. No explicit
+           null-reset needed here. */
+        host->HitTest(*hmsg);
 
         struct MUIR_HTMLview_GetContextInfo *cinfo = &data->ContextInfo;
         STRPTR src[] = { hmsg->URL, hmsg->ImgSrc, hmsg->Frame, hmsg->Background };
