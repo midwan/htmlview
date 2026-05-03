@@ -460,17 +460,35 @@ BOOL ImgClass::ReceiveImage (struct PictureFrame *pic)
   pic->LockPicture();
   YStart = YStop = 0;
 
-  if(!GivenWidth)
+  /* HTML semantics: when only one of width/height is given as a pixel
+     value, derive the other from the picture's aspect ratio. When
+     both are missing, fall back to native for both. Size_Percent
+     attributes don't get aspect treatment here — they're resolved
+     against the viewport at layout time, by which point the missing
+     dimension has already been pinned to native. */
+  if(!GivenWidth && !GivenHeight)
   {
-    GivenWidth = new (std::nothrow) struct ArgSize(pic->Width, Size_Pixels);
-    if (!GivenWidth) return FALSE;
+    GivenWidth  = new (std::nothrow) struct ArgSize(pic->Width,  Size_Pixels);
+    GivenHeight = new (std::nothrow) struct ArgSize(pic->Height, Size_Pixels);
+    if(!GivenWidth || !GivenHeight) return FALSE;
     relayout = TRUE;
   }
-
-  if(!GivenHeight)
+  else if(!GivenWidth)
   {
-    GivenHeight = new (std::nothrow) struct ArgSize(pic->Height, Size_Pixels);
-    if (!GivenHeight) return FALSE;
+    LONG nativeW = (LONG)pic->Width, nativeH = (LONG)pic->Height;
+    LONG h = (GivenHeight->Type == Size_Pixels) ? GivenHeight->Size : nativeH;
+    LONG w = (nativeH > 0) ? (nativeW * h) / nativeH : nativeW;
+    GivenWidth = new (std::nothrow) struct ArgSize(w, Size_Pixels);
+    if(!GivenWidth) return FALSE;
+    relayout = TRUE;
+  }
+  else if(!GivenHeight)
+  {
+    LONG nativeW = (LONG)pic->Width, nativeH = (LONG)pic->Height;
+    LONG w = (GivenWidth->Type == Size_Pixels) ? GivenWidth->Size : nativeW;
+    LONG h = (nativeW > 0) ? (nativeH * w) / nativeW : nativeH;
+    GivenHeight = new (std::nothrow) struct ArgSize(h, Size_Pixels);
+    if(!GivenHeight) return FALSE;
     relayout = TRUE;
   }
 

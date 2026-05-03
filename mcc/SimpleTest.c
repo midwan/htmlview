@@ -133,14 +133,16 @@ static const char *test_html =
     "<p>&copy; &reg; &trade; &lt; &gt; &amp; &larr; &rarr;</p>"
 
     "<h2>Mastodon avatar scaling</h2>"
-    "<p>Same PROGDIR:test.png at five sizes. The scaled cells must "
-    "render at the requested width x height, not clipped.</p>"
+    "<p>Same PROGDIR:test.png at six sizes. The scaled cells must "
+    "render at the requested width x height, not clipped. The "
+    "aspect-only cells should preserve the source aspect ratio.</p>"
     "<p>"
     "  <img src=\"PROGDIR:test.png\" alt=\"native\">"
     "  <img src=\"PROGDIR:test.png\" alt=\"64x64\" width=\"64\" height=\"64\">"
     "  <img src=\"PROGDIR:test.png\" alt=\"32x32 #1\" width=\"32\" height=\"32\">"
     "  <img src=\"PROGDIR:test.png\" alt=\"32x32 #2\" width=\"32\" height=\"32\">"
     "  <img src=\"PROGDIR:test.png\" alt=\"96x32\" width=\"96\" height=\"32\">"
+    "  <img src=\"PROGDIR:test.png\" alt=\"width-only 48\" width=\"48\">"
     "</p>"
 
     "<h2>Mastodon-style links</h2>"
