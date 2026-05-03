@@ -137,6 +137,9 @@ VOID ImageCache::AddImage (STRPTR url, struct PictureFrame *pic)
   {
     LastEntry = (LastEntry->Next = item);
     CurrentSize += pic->Size();
+    D(DBF_STARTUP, "ImageCache: ADD  %s (%lux%lu, total now %lu/%lu)",
+      url, (ULONG)pic->Width, (ULONG)pic->Height,
+      (ULONG)CurrentSize, (ULONG)MaxSize);
 
     struct ImageCacheItem *preprev = NULL, *prev, *first = FirstEntry;
     while(CurrentSize > MaxSize && first)
@@ -150,7 +153,9 @@ VOID ImageCache::AddImage (STRPTR url, struct PictureFrame *pic)
           if(!(FirstEntry = first))
             LastEntry = (struct ImageCacheItem *)&FirstEntry;
 
-        CurrentSize -= prev->Picture->Size();
+        ULONG freed = prev->Picture->Size();
+        D(DBF_STARTUP, "ImageCache: EVICT %s (%lub freed)", prev->URL, (ULONG)freed);
+        CurrentSize -= freed;
         delete prev;
 
         if(preprev)
@@ -185,11 +190,15 @@ struct PictureFrame *ImageCache::FindImage (STRPTR url, ULONG width, ULONG heigh
         LastEntry = (LastEntry->Next = prev);
         prev->Next = NULL;
       }
+      D(DBF_STARTUP, "ImageCache: HIT  %s (%lux%lu cached, asked %lux%lu)",
+        url, (ULONG)prev->Picture->Width, (ULONG)prev->Picture->Height,
+        (ULONG)width, (ULONG)height);
       ReleaseSemaphore(&ImageMutex);
       return(prev->Picture);
     }
     preprev = prev;
   }
+  D(DBF_STARTUP, "ImageCache: MISS %s (asked %lux%lu)", url, (ULONG)width, (ULONG)height);
   ReleaseSemaphore(&ImageMutex);
   return(NULL);
 }
