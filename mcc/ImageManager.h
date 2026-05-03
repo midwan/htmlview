@@ -45,7 +45,9 @@ class ImageCache
     ImageCache (ULONG maxsize);
     ~ImageCache ();
     VOID AddImage (STRPTR url, struct PictureFrame *pic);
-    struct PictureFrame *FindImage (STRPTR url, ULONG width, ULONG height);
+    /* Cache is keyed by URL only; per-instance scaling lives in
+       ImgClass via BitmapScaler. */
+    struct PictureFrame *FindImage (STRPTR url);
     VOID FlushCache (STRPTR url = NULL);
 
     struct ImageCacheItem *FirstEntry, *LastEntry;

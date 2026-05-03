@@ -170,7 +170,7 @@ VOID ImageCache::AddImage (STRPTR url, struct PictureFrame *pic)
   ReleaseSemaphore(&ImageMutex);
 }
 
-struct PictureFrame *ImageCache::FindImage (STRPTR url, ULONG width, ULONG height)
+struct PictureFrame *ImageCache::FindImage (STRPTR url)
 {
   ObtainSemaphore(&ImageMutex);
   struct ImageCacheItem *preprev = NULL, *prev, *first = FirstEntry;
@@ -179,7 +179,7 @@ struct PictureFrame *ImageCache::FindImage (STRPTR url, ULONG width, ULONG heigh
     prev = first;
     first = first->Next;
 
-    if(!strcmp(url, prev->URL) && prev->Picture->MatchSize(width, height))
+    if(!strcmp(url, prev->URL))
     {
       if(prev != LastEntry)
       {
@@ -197,10 +197,6 @@ struct PictureFrame *ImageCache::FindImage (STRPTR url, ULONG width, ULONG heigh
     }
     preprev = prev;
   }
-  /* width/height are kept on the public signature for ABI compat with
-     the old per-(URL,W,H) cache key. All in-tree callers now pass 0,0
-     so the size dimension is intentionally omitted from the log;
-     they're still consumed by MatchSize() above. */
   D(DBF_STARTUP, "ImageCache: MISS %s", url);
   ReleaseSemaphore(&ImageMutex);
   return(NULL);

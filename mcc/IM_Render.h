@@ -40,7 +40,6 @@ struct PictureFrame
   VOID LockPicture ();
   VOID UnLockPicture ();
   ULONG Size ();
-  BOOL MatchSize (LONG width, LONG height);
 
   struct PictureFrame *Next;
   LONG Width, Height, Depth; /* Depth is only > 1 when interleaved */
@@ -56,6 +55,10 @@ struct PictureFrame
 };
 
 #define PicFLG_Full     (1 << 0)
+/* PicFLG_ScaledX/Y were set by the legacy ScaleEngine path. The
+   modern datatypes-based decoder doesn't scale during decode (scaling
+   is handled per-instance by ImgClass via BitmapScaler), so these
+   were always 0 in practice. Kept here as reserved bits. */
 #define PicFLG_ScaledX  (1 << 1)
 #define PicFLG_ScaledY  (1 << 2)
 #define PicFLG_Complete (1 << 3)

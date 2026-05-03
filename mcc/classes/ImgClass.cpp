@@ -297,7 +297,7 @@ BOOL ImgClass::Layout (struct LayoutMessage &lmsg)
   {
     /* URL-only lookup: ImgClass owns scaling, so the cache entry is
        always the native-sized picture shared across instances. */
-    if((Picture = lmsg.Share->ImageStorage->FindImage(url, 0, 0)))
+    if((Picture = lmsg.Share->ImageStorage->FindImage(url)))
     {
       ReceiveImage(Picture);
       /* Width()/Height() return the HTML-requested dims if set, else
@@ -400,7 +400,7 @@ VOID ImgClass::MinMax (struct MinMaxMessage &mmsg)
   if(!Picture && Source && (url = (STRPTR)DoMethod(lmsg->HTMLview, MUIM_HTMLview_AddPart, (ULONG)Source)))
   {
     /* URL-only lookup; see Layout() above for rationale. */
-    if((Picture = lmsg->Share->ImageStorage->FindImage(url, 0, 0)))
+    if((Picture = lmsg->Share->ImageStorage->FindImage(url)))
     {
       ReceiveImage(Picture);
       width = Width(80, lmsg);

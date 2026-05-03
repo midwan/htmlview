@@ -77,7 +77,7 @@ VOID BackFillClass::FindImage (struct LayoutMessage &lmsg)
   STRPTR url;
   if(!Picture && Source && (url = (STRPTR)DoMethod(lmsg.HTMLview, MUIM_HTMLview_AddPart, (ULONG)Source)))
   {
-    if((Picture = lmsg.Share->ImageStorage->FindImage(url, 0, 0)))
+    if((Picture = lmsg.Share->ImageStorage->FindImage(url)))
       Picture->LockPicture();
 
     delete url;

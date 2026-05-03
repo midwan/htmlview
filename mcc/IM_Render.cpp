@@ -89,11 +89,6 @@ ULONG PictureFrame::Size ()
   return(size + (Next ? Next->Size() : 0));
 }
 
-BOOL PictureFrame::MatchSize (LONG width, LONG height)
-{
-  return((width ? Width == width : !(Flags & PicFLG_ScaledX)) && (height ? Height == height : !(Flags & PicFLG_ScaledY)));
-}
-
 RenderEngine::RenderEngine (struct Screen *scr, struct DecoderData *data)
 {
   Scr = scr;
