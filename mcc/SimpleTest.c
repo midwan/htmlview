@@ -162,20 +162,36 @@ static const char *test_html =
     "</p>"
 
     "<h2>UTF-8 (codesets.library)</h2>"
-    "<p>If codesets.library v6+ is installed, the bytes below were "
-    "converted from UTF-8 to the system codeset before parsing — the "
+    "<p>If codesets.library v6+ is installed, the UTF-8 bytes below "
+    "were converted to the system codeset before parsing -- the "
     "accented characters should render correctly:</p>"
     "<p>Caf\xc3\xa9, na\xc3\xafve, fa\xc3\xa7ade, jalape\xc3\xb1o, "
     "\xc3\xa9\xc3\xa8\xc3\xaa\xc3\xab \xc3\xa1\xc3\xa0\xc3\xa2\xc3\xa4 "
     "\xc3\xb1 \xc3\x9f.</p>"
-    "<p>(Without codesets.library installed these will appear as "
-    "raw UTF-8 byte pairs — the previous behaviour.)</p>"
+    "<p>Without codesets.library installed these appear as raw UTF-8 "
+    "byte pairs (the previous behaviour). The previous build's"
+    "&quot;[80 94]&quot; glyphs in this section's explanatory text "
+    "were the em-dashes inside this very SimpleTest.c blob -- they're "
+    "now plain ASCII so the diagnostic stays legible regardless.</p>"
 
     "<h2>HTML5 block elements</h2>"
+    "<p>Diagnostic A: 3x &lt;div&gt; (the original tag) -- each must "
+    "be on its own line:</p>"
+    "<div>DIV one.</div>"
+    "<div>DIV two.</div>"
+    "<div>DIV three.</div>"
+
+    "<p>Diagnostic B: 3x &lt;section&gt; (alias to tag_DIV) -- each "
+    "must be on its own line:</p>"
+    "<section>SECTION one.</section>"
+    "<section>SECTION two.</section>"
+    "<section>SECTION three.</section>"
+
+    "<p>Diagnostic C: full nest:</p>"
     "<article>"
-    "<header><b>Article header (HTML5 &lt;article&gt;&lt;header&gt;)</b></header>"
-    "<section>Section one — block-level paragraph break before/after.</section>"
-    "<section>Section two — also rendered as a separate block.</section>"
+    "<header><b>Article header (HTML5 article+header)</b></header>"
+    "<section>Section one (block-level paragraph break before/after).</section>"
+    "<section>Section two (also rendered as a separate block).</section>"
     "<aside>Aside (sidebar-style content).</aside>"
     "<footer>Article footer.</footer>"
     "</article>"
@@ -186,7 +202,7 @@ static const char *test_html =
     "</figure>"
 
     "<h2>Body-less rendering</h2>"
-    "<p>The fragment below has no &lt;body&gt; tag — its content "
+    "<p>The fragment below has no &lt;body&gt; tag -- its content "
     "should still render. (Tested via the full document above; this "
     "section just documents the expected behaviour.)</p>"
 
@@ -198,6 +214,27 @@ static const char *test_html =
 
     "<p align=\"center\"><b>End of Test Suite</b></p>"
     "</body></html>";
+
+/* Probe codesets.library at startup so the user can tell whether the
+   UTF-8 conversion path even has a chance of firing. Open and close
+   independently of the .mcc; the .mcc keeps its own handle. */
+static void ProbeCodesets(void)
+{
+    struct Library *cs = OpenLibrary("codesets.library", 6);
+    if (cs)
+    {
+        printf("SimpleTest: codesets.library v%ld.%ld found -- UTF-8 conversion enabled\n",
+               (LONG)cs->lib_Version, (LONG)cs->lib_Revision);
+        CloseLibrary(cs);
+    }
+    else
+    {
+        printf("SimpleTest: codesets.library NOT installed -- UTF-8 input "
+               "will pass through unchanged.\n");
+        printf("            Install it from Aminet (util/libs/codesets.lha) "
+               "to enable conversion.\n");
+    }
+}
 
 int main(void)
 {
@@ -220,6 +257,8 @@ int main(void)
         kprintf("SimpleTest: Failed to open libraries\n");
         return 20;
     }
+
+    ProbeCodesets();
 
     /* The nethook library opens bsdsocket/amisslmaster/amissl on demand
        from the HTMLview decoder task; nothing to do here beyond wiring
