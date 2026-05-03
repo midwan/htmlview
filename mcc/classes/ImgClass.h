@@ -30,7 +30,12 @@
 class ImgClass : public AttrClass
 {
   public:
-    ImgClass () : AttrClass() { ; }
+    ImgClass () : AttrClass()
+    {
+      ScaledBMp = NULL;
+      ScaledMask = NULL;
+      ScaledW = ScaledH = 0;
+    }
     ~ImgClass ();
     VOID Parse (struct ParseMessage &pmsg);
     VOID MinMax (struct MinMaxMessage &mmsg);
@@ -63,6 +68,17 @@ class ImgClass : public AttrClass
     STRPTR Map;
     class MapClass *MapObj;
     ULONG HSpace, VSpace;
+
+    /* Per-instance scaled copy of Picture->BMp / Picture->Mask, built
+       on receipt when the HTML requested width/height differs from the
+       picture's native size. NULL otherwise; renderer falls back to
+       the cache-shared native bitmap directly. */
+    struct BitMap *ScaledBMp;
+    UBYTE *ScaledMask;
+    UWORD ScaledW, ScaledH;
+
+    VOID BuildScaledBitmap (struct PictureFrame *pic);
+    VOID FreeScaledBitmap ();
 
     BOOL TestPixel(UBYTE *line, LONG x);
 };

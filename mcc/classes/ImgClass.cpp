@@ -32,6 +32,7 @@
 #include "ParseMessage.h"
 #include "ScanArgs.h"
 #include "SharedData.h"
+#include "BitmapScaler.h"
 
 #include <proto/cybergraphics.h>
 #include <new>
@@ -44,6 +45,54 @@ ImgClass::~ImgClass ()
   delete GivenWidth;
   delete GivenHeight;
   delete Map;
+  FreeScaledBitmap();
+}
+
+VOID ImgClass::FreeScaledBitmap ()
+{
+  if(ScaledBMp)
+  {
+    WaitBlit();
+    FreeBitMap(ScaledBMp);
+    ScaledBMp = NULL;
+  }
+  if(ScaledMask)
+  {
+    FreeRaster(ScaledMask, ScaledW, ScaledH);
+    ScaledMask = NULL;
+  }
+  ScaledW = ScaledH = 0;
+}
+
+VOID ImgClass::BuildScaledBitmap (struct PictureFrame *pic)
+{
+  if(!pic || !pic->BMp || !GivenWidth || !GivenHeight)
+    return;
+
+  LONG reqW = GivenWidth->Size;
+  LONG reqH = GivenHeight->Size;
+
+  /* Skip when nothing to do (no HTML override, or it already matches
+     the picture's native size). The renderer falls through to the
+     cache-shared native bitmap in that case. */
+  if(reqW <= 0 || reqH <= 0)
+    return;
+  if(reqW == (LONG)pic->Width && reqH == (LONG)pic->Height)
+    return;
+
+  FreeScaledBitmap();
+
+  ULONG depth = GetBitMapAttr(pic->BMp, BMA_DEPTH);
+  ScaledBMp = ScaleBitmapTo(pic->BMp,
+                            (UWORD)pic->Width, (UWORD)pic->Height,
+                            (UWORD)reqW, (UWORD)reqH,
+                            depth, pic->BMp);
+  if(pic->Mask)
+    ScaledMask = ScaleMaskTo(pic->Mask,
+                             (UWORD)pic->Width, (UWORD)pic->Height,
+                             (UWORD)reqW, (UWORD)reqH);
+  ScaledW = (UWORD)reqW;
+  ScaledH = (UWORD)reqH;
 }
 
 VOID ImgClass::FreeColours(struct ColorMap *cmap UNUSED)
@@ -58,6 +107,10 @@ VOID ImgClass::FreeColours(struct ColorMap *cmap UNUSED)
     FreeBitMap(BlendBitMap);
     BlendBitMap = NULL;
   }
+
+  /* Drop any per-instance scaled copy too — it references the same
+     screen, and a rebuilt page will rebuild it from the new Picture. */
+  FreeScaledBitmap();
 }
 
 VOID ImgClass::GetImages (struct GetImagesMessage &gmsg)
@@ -384,6 +437,10 @@ BOOL ImgClass::ReceiveImage (struct PictureFrame *pic)
     relayout = TRUE;
   }
 
+  /* Build a per-instance scaled copy if the HTML asked for dimensions
+     that diverge from the picture's native size. No-op otherwise. */
+  BuildScaledBitmap(pic);
+
   return(relayout);
 }
 
@@ -458,8 +515,28 @@ VOID ImgClass::Render (struct RenderMessage &rmsg)
   LONG x2 = x1+width-1, y2 = y1+height-1;
   if(Picture)
   {
-    LONG pass_height = YStop-YStart;
-    if(Picture->Mask)
+    /* Source selection: ScaledBMp/ScaledMask are populated when the
+       HTML asked for dimensions that diverge from the picture's
+       native size (see BuildScaledBitmap). When present, the source
+       extent matches the rendered (width x height) rectangle exactly,
+       so we override the YStart/YStop progressive-decode markers —
+       those are decoder-driven and only meaningful for the native
+       bitmap path. */
+    struct BitMap *srcBmp  = ScaledBMp  ? ScaledBMp  : Picture->BMp;
+    UBYTE         *srcMask = ScaledMask ? ScaledMask : Picture->Mask;
+    LONG src_y, pass_height;
+    if(ScaledBMp)
+    {
+      src_y = 0;
+      pass_height = height;
+    }
+    else
+    {
+      src_y = YStart;
+      pass_height = YStop-YStart;
+    }
+
+    if(srcMask)
     {
       struct RastPort *tmprp;
       if(rmsg.TargetObj == (class SuperClass *)this && (tmprp = rmsg.ObtainDoubleBuffer(width, pass_height)))
@@ -468,14 +545,14 @@ VOID ImgClass::Render (struct RenderMessage &rmsg)
             yoffset = rmsg.Top  + y1 - rmsg.MinY;
 
         rmsg.RPort = tmprp;
-        rmsg.BackgroundObj->DrawBackground(rmsg, 0, 0, width-1, pass_height-1, xoffset, yoffset+YStart);
-        BltMaskRPort(Picture->BMp, 0, YStart, tmprp, 0, 0, width, pass_height, Picture->Mask);
-        BltBitMapRastPort(tmprp->BitMap, 0, 0, rp, x1, y1+YStart, width, pass_height, 0x0c0);
+        rmsg.BackgroundObj->DrawBackground(rmsg, 0, 0, width-1, pass_height-1, xoffset, yoffset+src_y);
+        BltMaskRPort(srcBmp, 0, src_y, tmprp, 0, 0, width, pass_height, srcMask);
+        BltBitMapRastPort(tmprp->BitMap, 0, 0, rp, x1, y1+src_y, width, pass_height, 0x0c0);
         rmsg.RPort = rp;
       }
       else
       {
-        BltMaskRPort(Picture->BMp, 0, YStart, rp, x1, y1+YStart, width, pass_height, Picture->Mask);
+        BltMaskRPort(srcBmp, 0, src_y, rp, x1, y1+src_y, width, pass_height, srcMask);
       }
     }
     else
@@ -530,8 +607,8 @@ VOID ImgClass::Render (struct RenderMessage &rmsg)
         Flags &= ~FLG_Img_CreateAlpha;
       }
 
-      struct BitMap *bmp = BlendBitMap ? BlendBitMap : Picture->BMp;
-      BltBitMapRastPort(bmp, 0, YStart, rp, x1, y1+YStart, width, pass_height, 0x0c0);
+      struct BitMap *bmp = BlendBitMap ? BlendBitMap : srcBmp;
+      BltBitMapRastPort(bmp, 0, src_y, rp, x1, y1+src_y, width, pass_height, 0x0c0);
     }
 
     YStart = 0;
