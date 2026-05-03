@@ -250,6 +250,39 @@ anchor handling.
 
 ---
 
+## Phase 14 — Mastodon-content fixes (img scaling, anchor class) `[x]`
+
+**Goal.** Make HTMLview.mcc usable as a Mastodon-content renderer.
+Driven by observations from the amidon2 client.
+
+**Delivered.**
+- `<img width=W height=H>` now scales the rendered bitmap. The
+  per-instance scaled copy is built on receipt via `BitMapScale()`
+  (graphics.library V36+) inside the new `BitmapScaler` translation
+  unit (`mcc/BitmapScaler.{h,cpp}`). Previously the renderer blitted
+  the cache-shared native bitmap at 1:1, leaving the rendered image
+  clipped horizontally and at native height vertically.
+- The image cache is now keyed by URL only; per-instance scaling
+  handles divergent `(W,H)` from the same `<img src>`. Same-URL
+  references with different requested sizes share one fetch + decode.
+- `<a class="...">` is preserved through parsing and surfaced via
+  the new `MUIA_HTMLview_LinkClass` notification attribute, set
+  alongside `MUIA_HTMLview_ClickedURL` on click. Also exposed via
+  `MUIR_HTMLview_GetContextInfo::LinkClass`. Lets clients distinguish
+  Mastodon mention vs. hashtag vs. plain links without URL-pattern
+  matching.
+- Cache hit/miss/add/evict logging behind `D(DBF_STARTUP, ...)` for
+  debug builds.
+- Host-side unit test (`mcc/tests/test_bitmap_scaler.c`) pins the
+  scaler's dimension-rounding rules without requiring graphics.library.
+- `SimpleTest` exercises the new behaviour: a "Mastodon avatar
+  scaling" section with the same `test.png` at four sizes plus a
+  click hook that prints `url` + `class` for each anchor click.
+
+**Plan reference:** `docs/superpowers/plans/2026-05-03-htmlview-mastodon-fixes.md`
+
+---
+
 ## Phase 13 — Modernize docs `[x]`
 
 **Delivered.**
